@@ -20,7 +20,7 @@ public class User {
     private Instant createdAt = Instant.now();//default value set on object creation
 
     public User() {}
-    
+
     public User(String email) {
         this.email = email;
     }
