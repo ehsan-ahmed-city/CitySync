@@ -5,7 +5,7 @@ import com.citysync.backend.user.UserRepo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.list;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users/{userId}/modules")
@@ -48,16 +48,13 @@ public class ModuleController{
 
         /** converts entity to DTO before returning
         * so it avoids returning full User object inside module*/
-        @GetMapping
         return ResponseEntity.ok(ModuleResponse.from(saved));
     }
 
     /**list all modules for specific user
     * and HTTP: Get /users/{userId}/modules*/    
     @GetMapping
-    public ResponseEntity<List<ModuleResponse>> list(
-            @PathVariable Long userId
-    ) {
+    public ResponseEntity<List<ModuleResponse>> list(@PathVariable Long userId) {
 
         if (!userRepo.existsById(userId)) {
             return ResponseEntity.notFound().build(); //if user doesn't exist return 404
@@ -77,7 +74,7 @@ public class ModuleController{
 }
 
 //request body json for create:  {"code":"IN3001","name":"Cool Module","credits":15}
-record CreateModuleRequest(String code, String name, Integer credits) {}
+record createModuleReq(String code, String name, Integer credits) {}
 
 record ModuleResponse(Long id, Long userId, String code, String name, Integer credits) {
     static ModuleResponse from(Module m) {
