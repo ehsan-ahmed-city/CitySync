@@ -43,5 +43,11 @@ public class Coursework {
         this.weighting = weighting;
     }
 
-
+    //getters
+    public Long getId() { return id; }
+    public Module getModule() { return module; }
+    public String getTitle() { return title; }
+    public LocalDate getDueDate() { return dueDate; }
+    public Integer getWeighting() { return weighting; }
+    public Instant getCreatedAt() { return createdAt; }
 }
