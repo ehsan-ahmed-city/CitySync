@@ -21,8 +21,26 @@ public class CwController {
         this.cwRepo = cwRepo;
     }
 
-    /** post /users/{ userId}/modules/{moduleId}/coursework
-     * creats coursework under specific module for user*/
+    /** get /users/{userId}/coursework
+     * lists all coursework for a user across all modules */
+    @GetMapping("/users/{userId}/coursework")
+    public ResponseEntity<java.util.List<CourseworkResponse>> listForUser(@PathVariable Long userId) {
+
+        if (!userRepo.existsById(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var items = cwRepo.findByModuleUserId(userId)
+                .stream()
+                .map(CourseworkResponse::from)
+                .toList();
+
+        return ResponseEntity.ok(items);
+    }
+
+
+    /** post/users/{ userId}/modules/{moduleId}/coursework
+     * creates coursework under specific module for user*/
     @PostMapping("/users/{userId}/modules/{moduleId}/coursework")
     public ResponseEntity<CourseworkResponse> create(
             @PathVariable Long userId,
@@ -77,3 +95,4 @@ record CourseworkResponse(
         );
     }
 }
+
