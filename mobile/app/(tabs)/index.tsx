@@ -33,7 +33,7 @@ export default function HomeScreen() {
 
   async function loadModules() {//GET/users/{id}/modules
     try {
-    
+
       const res = await fetch(`${API_BASE}/users/${USER_ID}/modules`);
       if (!res.ok) {
 
@@ -72,6 +72,74 @@ export default function HomeScreen() {
 
     }
   }
+
+
+
+  async function createModule() {//POST/users/{id}/modules
+    try {
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: mCode,
+          name: mName,
+          credits: mCredits.trim() === "" ? null : Number(mCredits),
+        }),
+      });
+
+      if (!res.ok) {
+
+        const txt = await res.text();
+        Alert.alert("Create Module failed", `${res.status}\n${txt}`);
+        return;
+
+      }
+
+      await loadModules();//refresh list after succesful create
+
+    } catch (e: any) {
+
+      Alert.alert("Creaet Module error", String(e?.message ?? e));
+
+    }
+  }
+
+
+
+  async function createCoursework() {//POST/users/{id}/modules/{moduleId}/coursework
+    try {
+
+      const moduleIdNum = Number(cwModuleId);
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules/${moduleIdNum}/coursework`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: cwTitle,
+          dueDate: cwDueDate,
+          weighting: cwWeighting.trim() === "" ? null : Number(cwWeighting),
+        }),
+      });
+
+      if (!res.ok) {
+
+        const txt = await res.text();
+        Alert.alert("Create Coursework failed", `${res.status}\n${txt}`);
+        return;
+
+      }
+
+      await loadCoursework();//refresh list after successful create
+
+    } catch (e: any) {
+
+      Alert.alert("Create Coursework error", String(e?.message ?? e));
+
+    }
+  }
+
+
 
   //on screen load, fetch both lists
   useEffect(() => {
