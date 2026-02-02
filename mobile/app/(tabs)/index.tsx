@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { SafeAreaView, Text } from "react-native";
+import { SafeAreaView, Text, Alert } from "react-native";
 
 const API_BASE = "http://192.168.0.10:8080";//my laptop LAN ip
 const USER_ID = 1;
@@ -13,7 +13,7 @@ type CourseworkDto = {
   title: string;
   dueDate: string;
   weighting: number | null;
-}; 
+};
 
 export default function HomeScreen() {
   //lists
@@ -29,6 +29,48 @@ export default function HomeScreen() {
   const [cwTitle, setCwTitle] = useState("PDD submission");
   const [cwDueDate, setCwDueDate] = useState("2026-02-09");
   const [cwWeighting, setCwWeighting] = useState("30");
+
+  async function loadModules() {//GET/users/{id}/modules
+    try {
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules`);
+      if (!res.ok) {
+
+        const txt = await res.text();
+        Alert.alert("Load modules failed", `${res.status}\n${txt}`);
+        return;
+
+      }
+      const json = (await res.json()) as ModuleDto[];
+      setModules(json);
+    } catch (e: any) {
+
+      Alert.alert("Load modules error", String(e?.message ?? e));
+
+    }
+  }
+
+
+
+  async function loadCoursework() { //get/users/{id}/coursework
+    try {
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/coursework`);
+      if (!res.ok) {
+
+        const txt = await res.text();
+        Alert.alert("Load coursework failed", `${res.status}\n${txt}`);
+
+        return;
+      }
+      const json = (await res.json()) as CourseworkDto[];
+      setCoursework(json);
+    } catch (e: any) {
+
+
+      Alert.alert("Load coursework error", String(e?.message ?? e));
+
+    }
+  }
 
   return (
     <SafeAreaView style={{ padding: 16, marginTop: 24 }}>
