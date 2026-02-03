@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, Text, Alert } from "react-native";
+import { SafeAreaView, Text, TextInput, Button, FlatList, View, Alert } from "react-native";
 
 const API_BASE = "http://192.168.0.10:8080";//my laptop LAN ip
 const USER_ID = 1;
@@ -152,6 +152,35 @@ export default function HomeScreen() {
       <Text style={{ fontSize: 20, fontWeight: "600", marginBottom: 12 }}>
         CitySync (User {USER_ID})
       </Text>
+
+      {/* Create module */}
+      <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>Add Module</Text>
+      <View style={{ gap: 8, marginBottom: 12 }}>
+        <TextInput value={mCode} onChangeText={setMCode} placeholder="Code" style={{ borderWidth: 1, padding: 10 }} />
+        <TextInput value={mName} onChangeText={setMName} placeholder="Name" style={{ borderWidth: 1, padding: 10 }} />
+        <TextInput
+          value={mCredits}
+          onChangeText={setMCredits}
+          placeholder="Credits"
+          keyboardType="numeric"
+          style={{ borderWidth: 1, padding: 10 }}
+        />
+        <Button title="Create Module" onPress={createModule} />
+        <Button title="Refresh Modules" onPress={loadModules} />
+      </View>
+
+      {/* Module list */}
+      <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>Modules</Text>
+      <FlatList
+        data={modules}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
+            <Text>{item.code} — {item.name}</Text>
+            <Text>Credits: {item.credits ?? "n/a"} | Module ID: {item.id}</Text>
+          </View>
+        )}
+      />
 
       <Text>Modules loaded: {modules.length}</Text>
       <Text>Coursework loaded: {coursework.length}</Text>
