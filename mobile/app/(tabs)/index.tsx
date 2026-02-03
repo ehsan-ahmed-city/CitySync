@@ -182,8 +182,60 @@ export default function HomeScreen() {
         )}
       />
 
+      {/* Create coursework */}
+
+      <Text style={{ fontSize: 16, fontWeight: "600", marginTop: 14, marginBottom: 6 }}>Add Coursework</Text>
+      <View style={{ gap: 8, marginBottom: 12 }}>
+        <TextInput
+          value={cwModuleId}
+          onChangeText={setCwModuleId}
+          placeholder="Module ID"
+          keyboardType="numeric"
+          style={{ borderWidth: 1, padding: 10 }}
+        />
+
+        <TextInput value={cwTitle} onChangeText={setCwTitle} placeholder="Title" style={{ borderWidth: 1, padding: 10 }} />
+        <TextInput
+          value={cwDueDate}
+          onChangeText={setCwDueDate}
+          placeholder="Due Date (YYYY-MM-DD)"
+          style={{ borderWidth: 1, padding: 10 }}
+
+        />
+
+        <TextInput
+          value={cwWeighting}
+          onChangeText={setCwWeighting}
+          placeholder="Weighting"
+          keyboardType="numeric"
+          style={{ borderWidth: 1, padding: 10 }}
+        />
+
+        <Button title="Create Coursework" onPress={createCoursework} />
+        <Button title="Refresh Coursework" onPress={loadCoursework} />
+      </View>
+
+
+      {/* Coursework list */}
+
+      <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>Coursework</Text>
+      <FlatList
+        data={coursework}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
+            <Text>{item.title}</Text>
+            <Text>Due: {item.dueDate} | Weighting: {item.weighting ?? "n/a"}%</Text>
+            <Text>Module ID: {item.moduleId}</Text>
+          </View>
+
+        )}
+
+      />
+
       <Text>Modules loaded: {modules.length}</Text>
       <Text>Coursework loaded: {coursework.length}</Text>
     </SafeAreaView>
+
   );
 }
