@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { SafeAreaView, Text, TextInput, Button, FlatList, View, Alert } from "react-native";
+import { SafeAreaView, Text, TextInput, Button, FlatList, View, Alert, ScrollView } from "react-native";
 
 const API_BASE = "http://192.168.0.10:8080";//my laptop LAN ip
 const USER_ID = 1;
@@ -168,96 +168,113 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={{ padding: 16, marginTop: 24 }}>
-      <Text style={{ fontSize: 20, fontWeight: "600", marginBottom: 12 }}>
-        CitySync (User {USER_ID})
-      </Text>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 24 }}>
+        <Text style={{ fontSize: 20, fontWeight: "600", marginBottom: 12 }}>
+          CitySync (User {USER_ID})
+        </Text>
 
-      <Text>API: {API_BASE}</Text>
-      <Text>Status: {status}</Text>
+        <Text>API: {API_BASE}</Text>
+        <Text>Status: {status}</Text>
 
-      {/* Create module */}
-      <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>Add Module</Text>
-      <View style={{ gap: 8, marginBottom: 12 }}>
-        <TextInput value={mCode} onChangeText={setMCode} placeholder="Code" style={{ borderWidth: 1, padding: 10 }} />
-        <TextInput value={mName} onChangeText={setMName} placeholder="Name" style={{ borderWidth: 1, padding: 10 }} />
-        <TextInput
-          value={mCredits}
-          onChangeText={setMCredits}
-          placeholder="Credits"
-          keyboardType="numeric"
-          style={{ borderWidth: 1, padding: 10 }}
-        />
-        <Button title="Create Module" onPress={createModule} />
-        <Button title="Refresh Modules" onPress={loadModules} />
-      </View>
+        {/* Create module */}
+        <Text style={{ fontSize: 16, fontWeight: "600", marginTop: 12, marginBottom: 6 }}>
+          Add Module
+        </Text>
 
-      {/* Module list */}
-      <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>Modules</Text>
-      <FlatList
-        data={modules}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
-            <Text>{item.code} — {item.name}</Text>
-            <Text>Credits: {item.credits ?? "n/a"} | Module ID: {item.id}</Text>
-          </View>
-        )}
-      />
+        <View style={{ gap: 8, marginBottom: 12 }}>
+          <TextInput value={mCode} onChangeText={setMCode} placeholder="Code" style={{ borderWidth: 1, padding: 10 }} />
+          <TextInput value={mName} onChangeText={setMName} placeholder="Name" style={{ borderWidth: 1, padding: 10 }} />
+          <TextInput
+            value={mCredits}
+            onChangeText={setMCredits}
+            placeholder="Credits"
+            keyboardType="numeric"
+            style={{ borderWidth: 1, padding: 10 }}
+          />
+          <Button title="Create Module" onPress={createModule} />
+          <Button title="Refresh Modules" onPress={loadModules} />
+        </View>
 
-      {/* Create coursework */}
+        {/* Module list */}
+        <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
+          Modules ({modules.length})
+        </Text>
 
-      <Text style={{ fontSize: 16, fontWeight: "600", marginTop: 14, marginBottom: 6 }}>Add Coursework</Text>
-      <View style={{ gap: 8, marginBottom: 12 }}>
-        <TextInput
-          value={cwModuleId}
-          onChangeText={setCwModuleId}
-          placeholder="Module ID"
-          keyboardType="numeric"
-          style={{ borderWidth: 1, padding: 10 }}
+        <FlatList
+          data={modules}
+          keyExtractor={(item) => String(item.id)}
+          scrollEnabled={false}
+//           scrollView for scrolling
+          renderItem={({ item }) => (
+            <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
+              <Text>{item.code} — {item.name}</Text>
+              <Text>Credits: {item.credits ?? "n/a"} | Module ID: {item.id}</Text>
+            </View>
+          )}
+          ListEmptyComponent={<Text>No modules yet.</Text>}
         />
 
-        <TextInput value={cwTitle} onChangeText={setCwTitle} placeholder="Title" style={{ borderWidth: 1, padding: 10 }} />
-        <TextInput
-          value={cwDueDate}
-          onChangeText={setCwDueDate}
-          placeholder="Due Date (YYYY-MM-DD)"
-          style={{ borderWidth: 1, padding: 10 }}
+        {/* Create coursework */}
 
+        <Text style={{ fontSize: 16, fontWeight: "600", marginTop: 14, marginBottom: 6 }}>
+          Add Coursework
+        </Text>
+
+        <View style={{ gap: 8, marginBottom: 12 }}>
+          <TextInput
+            value={cwModuleId}
+            onChangeText={setCwModuleId}
+            placeholder="Module ID"
+            keyboardType="numeric"
+            style={{ borderWidth: 1, padding: 10 }}
+          />
+
+          <TextInput value={cwTitle} onChangeText={setCwTitle} placeholder="Title" style={{ borderWidth: 1, padding: 10 }} />
+          <TextInput
+            value={cwDueDate}
+            onChangeText={setCwDueDate}
+            placeholder="Due Date (YYYY-MM-DD)"
+            style={{ borderWidth: 1, padding: 10 }}
+
+          />
+
+          <TextInput
+            value={cwWeighting}
+            onChangeText={setCwWeighting}
+            placeholder="Weighting"
+            keyboardType="numeric"
+            style={{ borderWidth: 1, padding: 10 }}
+          />
+
+          <Button title="Create Coursework" onPress={createCoursework} />
+          <Button title="Refresh Coursework" onPress={loadCoursework} />
+        </View>
+
+
+        {/* Coursework list */}
+
+        <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
+          Coursework ({coursework.length})
+        </Text>
+
+        <FlatList
+          data={coursework}
+          keyExtractor={(item) => String(item.id)}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
+              <Text>{item.title}</Text>
+              <Text>Due: {item.dueDate} | Weighting: {item.weighting ?? "n/a"}%</Text>
+              <Text>Module ID: {item.moduleId}</Text>
+            </View>
+
+          )}
+          ListEmptyComponent={<Text>No coursework yet.</Text>}
         />
 
-        <TextInput
-          value={cwWeighting}
-          onChangeText={setCwWeighting}
-          placeholder="Weighting"
-          keyboardType="numeric"
-          style={{ borderWidth: 1, padding: 10 }}
-        />
-
-        <Button title="Create Coursework" onPress={createCoursework} />
-        <Button title="Refresh Coursework" onPress={loadCoursework} />
-      </View>
-
-
-      {/* Coursework list */}
-
-      <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>Coursework</Text>
-      <FlatList
-        data={coursework}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
-            <Text>{item.title}</Text>
-            <Text>Due: {item.dueDate} | Weighting: {item.weighting ?? "n/a"}%</Text>
-            <Text>Module ID: {item.moduleId}</Text>
-          </View>
-
-        )}
-
-      />
-
-      <Text>Modules loaded: {modules.length}</Text>
-      <Text>Coursework loaded: {coursework.length}</Text>
+        <View style={{ height: 24 }} />
+      </ScrollView>
     </SafeAreaView>
 
   );

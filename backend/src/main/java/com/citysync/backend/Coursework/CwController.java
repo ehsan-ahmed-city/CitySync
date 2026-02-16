@@ -68,10 +68,90 @@ public class CwController {
 
         return ResponseEntity.ok(CourseworkResponse.from(saved));//return DTO response
     }
+
+
+    /**updates coursework under a specifc module for the user*/
+    @PutMapping("/users/{userId}/modules/{moduleId}/coursework/{courseworkId}")
+    public ResponseEntity<CourseworkResponse> update(
+            @PathVariable Long userId,
+            @PathVariable Long moduleId,
+            @PathVariable Long courseworkId,
+            @RequestBody UpdateCourseworkReq req
+    ) {
+        //check user exists
+        if (!userRepo.existsById(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        //check module exists and belongs to user
+        Module module = moduleRepo.findById(moduleId).orElse(null);
+        if (module == null || !module.getUser().getId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        //check cw exists
+        Coursework cw = cwRepo.findById(courseworkId).orElse(null);
+        if (cw == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        //check cw belongs to the same module
+        if (!cw.getModule().getId().equals(moduleId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        //check and apply updates
+        if (req.title() != null) {
+            if (req.title().isBlank()) return ResponseEntity.badRequest().build();
+            cw.setTitle(req.title());
+        }
+        if (req.dueDate() != null) {
+            cw.setDueDate(req.dueDate());
+        }
+        if (req.weighting() != null) {
+            cw.setWeighting(req.weighting());
+        }
+
+        Coursework saved = cwRepo.save(cw);
+        return ResponseEntity.ok(CourseworkResponse.from(saved));
+    }
+
+
+    /**deletes coursework under a specific module for the user */
+    @DeleteMapping("/users/{userId}/modules/{moduleId}/coursework/{courseworkId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long userId,
+            @PathVariable Long moduleId,
+            @PathVariable Long courseworkId
+    ) {
+        //check user exists
+        if (!userRepo.existsById(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        //check module exists and belongs to this user
+        Module module = moduleRepo.findById(moduleId).orElse(null);
+        if (module == null || !module.getUser().getId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        //sweing if cw exists and belongs to module
+        Coursework cw = cwRepo.findById(courseworkId).orElse(null);
+        if (cw == null || !cw.getModule().getId().equals(moduleId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        cwRepo.delete(cw);
+        return ResponseEntity.noContent().build();
+    }
+
+
 }
 
 //request body JSON for create coursework
 record CreateCourseworkReq(String title, LocalDate dueDate, Integer weighting) {}
+
+record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting) {}
 
 /**
  * response DTO returned to the client
@@ -95,4 +175,3 @@ record CourseworkResponse(
         );
     }
 }
-

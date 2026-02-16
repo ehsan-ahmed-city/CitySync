@@ -50,4 +50,18 @@ public class Coursework {
     public LocalDate getDueDate() { return dueDate; }
     public Integer getWeighting() { return weighting; }
     public Instant getCreatedAt() { return createdAt; }
+
+    //setters
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public void setWeighting(Integer weighting) {
+        this.weighting = weighting;
+    }
+
 }
