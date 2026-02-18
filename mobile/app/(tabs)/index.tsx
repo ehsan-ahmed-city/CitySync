@@ -267,6 +267,30 @@ export default function HomeScreen() {
               <Text>{item.title}</Text>
               <Text>Due: {item.dueDate} | Weighting: {item.weighting ?? "n/a"}%</Text>
               <Text>Module ID: {item.moduleId}</Text>
+
+              <Button
+                title="Delete"
+                onPress={async () => {
+                  try {
+                    const res = await fetch(
+                      `${API_BASE}/users/${USER_ID}/modules/${item.moduleId}/coursework/${item.id}`,
+                      { method: "DELETE" }
+                    );
+
+                    if (!res.ok) {
+                      const txt = await res.text();
+                      Alert.alert("Delete failed", `${res.status}\n${txt}`);
+                      return;
+                    }
+
+                    await loadCoursework();
+                    setStatus(`deleted coursework ${item.id}`);
+                  } catch (e: any) {
+                    Alert.alert("Delete error", String(e?.message ?? e));
+                  }
+                }}
+              />
+
             </View>
 
           )}
