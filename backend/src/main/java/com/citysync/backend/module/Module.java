@@ -1,7 +1,11 @@
 package com.citysync.backend.module;
 
+import com.citysync.backend.coursework.Coursework;
 import com.citysync.backend.user.User;
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "modules")
@@ -23,6 +27,10 @@ public class Module {
     private String name; // like Cloud
 
     private Integer credits;//optional
+
+    //if module is deleted, delete its coursework too
+    @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Coursework> courseworkItems = new ArrayList<>();
 
     public Module() {}
 

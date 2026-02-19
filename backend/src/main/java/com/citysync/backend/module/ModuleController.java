@@ -25,8 +25,8 @@ public class ModuleController{
 
     @PostMapping
     public ResponseEntity<ModuleResponse> create (
-        @PathVariable Long userId, //takes user ID from URL
-        @RequestBody createModuleReq req //the json body is mapped to a javarecord
+            @PathVariable Long userId, //takes user ID from URL
+            @RequestBody CreateModuleReq req //the json body is mapped to a javarecord
 
     ){
         User user = userRepo.findById(userId).orElse(null);
@@ -47,12 +47,12 @@ public class ModuleController{
         );
 
         /** converts entity to DTO before returning
-        * so it avoids returning full User object inside module*/
+         * so it avoids returning full User object inside module*/
         return ResponseEntity.ok(ModuleResponse.from(saved));
     }
 
     /**list all modules for specific user
-    * and HTTP: Get /users/{userId}/modules*/    
+     * and HTTP: Get /users/{userId}/modules*/
     @GetMapping
     public ResponseEntity<List<ModuleResponse>> list(@PathVariable Long userId) {
 
@@ -68,13 +68,66 @@ public class ModuleController{
                         .toList();//returns immutable list
 
         return ResponseEntity.ok(modules);
-    }    
+    }
 
-    
+
+    //update module
+    @PutMapping("/{moduleId}")
+    public ResponseEntity<ModuleResponse> update(
+            @PathVariable Long userId,
+            @PathVariable Long moduleId,
+            @RequestBody UpdateModuleReq req
+    ) {
+
+
+        if (!userRepo.existsById(userId)) return ResponseEntity.notFound().build();
+
+        Module m = moduleRepo.findById(moduleId).orElse(null);
+        if (m == null || !m.getUser().getId().equals(userId))
+            return ResponseEntity.notFound().build();
+        if (req.code() != null) {
+            if (req.code().isBlank()) return ResponseEntity.badRequest().build();
+            m.setCode(req.code());
+        }
+
+        if (req.name() != null) {
+
+            if (req.name().isBlank()) return ResponseEntity.badRequest().build();
+            m.setName(req.name());
+        }
+
+        if (req.credits() != null) {
+            m.setCredits(req.credits());
+        }
+        Module saved = moduleRepo.save(m);
+        return ResponseEntity.ok(ModuleResponse.from(saved));
+    }
+
+    //delete module
+    @DeleteMapping("/{moduleId}")
+    public ResponseEntity<Void> delete(
+
+            @PathVariable Long userId,
+            @PathVariable Long moduleId
+
+    ) {
+        if (!userRepo.existsById(userId))
+            return ResponseEntity.notFound().build();
+
+        Module m = moduleRepo.findById(moduleId).orElse(null);
+        if (m == null || !m.getUser().getId().equals(userId))
+            return ResponseEntity.notFound().build();
+        moduleRepo.delete(m);
+        return ResponseEntity.noContent().build();
+    }
+
+
 }
 
 //request body json for create:  {"code":"IN3001","name":"Cool Module","credits":15}
-record createModuleReq(String code, String name, Integer credits) {}
+record CreateModuleReq(String code, String name, Integer credits) {}
+
+record UpdateModuleReq(String code, String name, Integer credits) {}
 
 record ModuleResponse(Long id, Long userId, String code, String name, Integer credits) {
     static ModuleResponse from(Module m) {
