@@ -161,7 +161,90 @@ export default function HomeScreen() {
 
 
 
-  //on screen load, fetch both lists
+  async function updateModule(
+  //^updates an existing module
+    moduleId: number,
+    patch: Partial<{ code: string; name: string; credits: number | null }>
+  ) {
+
+    setStatus("updating module..."); //UI status feedback
+
+    try {
+
+      const res = await fetch(//HTTP PUT request to backend
+        `${API_BASE}/users/${USER_ID}/modules/${moduleId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),//convert JS object to JSON string
+        }
+      );
+
+      if (!res.ok) {
+
+        //read any error message body
+        const txt = await res.text();
+
+        setStatus(`update module failed ${res.status}`);//Ui status show failure
+        Alert.alert("Update Module failed", `${res.status}\n${txt}`);
+
+        return;
+      }
+
+      //if success then reload module list to show new changes
+      await loadModules();
+
+      setStatus(`updated module ${moduleId}`);
+
+    } catch (e: any) {
+
+      setStatus("update module error");
+      Alert.alert("Update Module error", String(e?.message ?? e));
+
+    }
+  }
+
+
+  async function deleteModule(moduleId: number) { //deletes a module by ID
+
+    //ui status feedback
+    setStatus("deleting module...");
+
+    try {
+
+      //HTTP delete request
+      const res = await fetch(
+        `${API_BASE}/users/${USER_ID}/modules/${moduleId}`,
+        {
+          method: "DELETE", //
+        }
+      );
+
+      //if backend returns failure
+      if (!res.ok) {
+
+        const txt = await res.text();
+
+        setStatus(`delete module failed ${res.status}`);
+
+        Alert.alert("Delete Module failed", `${res.status}\n${txt}`);
+
+        return;
+      }
+
+
+      await loadModules();//refreshes modules list after deletion
+      await loadCoursework();//reload coursework after module and coursework deletion
+
+      setStatus(`deleted module ${moduleId}`);
+
+    } catch (e: any) {
+      setStatus("delete module error");
+      Alert.alert("Delete Module error", String(e?.message ?? e));
+    }
+  }
+
+  //on screen load fetch both lists
   useEffect(() => {
     loadModules();
     loadCoursework();
@@ -210,6 +293,30 @@ export default function HomeScreen() {
             <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
               <Text>{item.code} — {item.name}</Text>
               <Text>Credits: {item.credits ?? "n/a"} | Module ID: {item.id}</Text>
+
+              <View style={{ marginTop: 8, gap: 8 }}>
+                <Button
+
+                  title="Quick Rename to 'Updated'"
+                  onPress={() => updateModule(item.id, { name: "Updated" })}
+                />
+                <Button
+
+                  title="Delete Module"
+                  onPress={() =>
+                    Alert.alert(
+                      "Delete module?",
+                      "This will also delete it's coursework",
+                      [
+
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Delete", style: "destructive", onPress: () => deleteModule(item.id) },
+
+                      ]
+                    )
+                  }
+                />
+              </View>
             </View>
           )}
           ListEmptyComponent={<Text>No modules yet.</Text>}
