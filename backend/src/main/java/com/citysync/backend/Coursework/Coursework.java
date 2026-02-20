@@ -32,6 +32,11 @@ public class Coursework {
     @Column(nullable = false)
     private Instant createdAt = Instant.now();//when it was created
 
+    @Column(nullable = false)
+    private boolean completed = false;
+
+    private Instant completedAt;
+
     protected Coursework() {
         // jpa needs a constructore with no args
     }
@@ -51,6 +56,9 @@ public class Coursework {
     public Integer getWeighting() { return weighting; }
     public Instant getCreatedAt() { return createdAt; }
 
+    public boolean isCompleted() { return completed; }
+    public Instant getCompletedAt() { return completedAt; }
+
     //setters
     public void setTitle(String title) {
         this.title = title;
@@ -62,6 +70,11 @@ public class Coursework {
 
     public void setWeighting(Integer weighting) {
         this.weighting = weighting;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
+        this.completedAt = completed ? Instant.now() : null;
     }
 
 }
