@@ -6,6 +6,7 @@ import com.citysync.backend.user.UserRepo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @RestController
@@ -112,6 +113,10 @@ public class CwController {
             cw.setWeighting(req.weighting());
         }
 
+        if (req.completed() != null) {
+            cw.setCompleted(req.completed());//completion toggle
+        }
+
         Coursework saved = cwRepo.save(cw);
         return ResponseEntity.ok(CourseworkResponse.from(saved));
     }
@@ -151,7 +156,7 @@ public class CwController {
 //request body JSON for create coursework
 record CreateCourseworkReq(String title, LocalDate dueDate, Integer weighting) {}
 
-record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting) {}
+record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting, Boolean completed) {}
 
 /**
  * response DTO returned to the client
@@ -162,7 +167,9 @@ record CourseworkResponse(
         Long userId,
         String title,
         LocalDate dueDate,
-        Integer weighting
+        Integer weighting,
+        Boolean completed,
+        Instant completedAt
 ) {
     static CourseworkResponse from(Coursework c) {
         return new CourseworkResponse(
@@ -171,7 +178,9 @@ record CourseworkResponse(
                 c.getModule().getUser().getId(),
                 c.getTitle(),
                 c.getDueDate(),
-                c.getWeighting()
+                c.getWeighting(),
+                c.isCompleted(),
+                c.getCompletedAt()
         );
     }
 }

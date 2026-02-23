@@ -13,6 +13,10 @@ type CourseworkDto = {
   title: string;
   dueDate: string;
   weighting: number | null;
+
+  //completion fields
+  completed?: boolean;
+  completedAt?: string | null;
 };
 
 export default function HomeScreen() {
@@ -244,6 +248,58 @@ export default function HomeScreen() {
     }
   }
 
+
+  async function setCourseworkCompleted(item: CourseworkDto, completed: boolean) {//toggle completion heper
+
+    setStatus(completed ? "marking complete..." : "marking incomplete...");
+
+    try {
+
+      const res = await fetch(
+        `${API_BASE}/users/${USER_ID}/modules/${item.moduleId}/coursework/${item.id}`,
+        {
+
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed }),
+        }
+      );
+
+      if (!res.ok) {
+
+        const txt = await res.text();
+        Alert.alert("Update falied", `${res.status}\n${txt}`);
+        return;
+
+      }
+      await loadCoursework();
+
+      setStatus(`coursework ${item.id} completed=${completed}`);
+    } catch (e: any) {
+      Alert.alert("Update error", String(e?.message ?? e));
+
+    }
+
+  }
+
+
+  function getReminderLevel(daysLeft: number) {
+    if (daysLeft <= 0) return { label: "OVERDUE", freq: "every 4 hours" };
+    if (daysLeft <= 1) return { label: "URGENT", freq: "daily" };
+    if (daysLeft <= 3) return { label: "SOON", freq: "every 2 days" };
+    return { label: "NORMAL", freq: "weekly" };
+  }
+
+  function daysUntil(yyyyMmDd: string) {
+    const [y, m, d] = yyyyMmDd.split("-").map(Number);
+    const due = new Date(y, m - 1, d, 23, 59, 0, 0);
+    const now = new Date();
+    const ms = due.getTime() - now.getTime();
+    return Math.floor(ms / (1000 * 60 * 60 * 24));
+  }
+
+
+
   //on screen load fetch both lists
   useEffect(() => {
     loadModules();
@@ -374,6 +430,26 @@ export default function HomeScreen() {
               <Text>{item.title}</Text>
               <Text>Due: {item.dueDate} | Weighting: {item.weighting ?? "n/a"}%</Text>
               <Text>Module ID: {item.moduleId}</Text>
+
+              {/*completion UI */}
+              <Text>Status: {item.completed ? "completed" : "pending"}</Text>
+
+              {!item.completed ? (
+                (() => {
+                  const dl = daysUntil(item.dueDate);
+                  const lvl = getReminderLevel(dl);
+                  return (
+                    <Text>
+                      Reminder: {lvl.label} ({lvl.freq})
+                    </Text>
+                  );
+                })()
+              ) : null}
+
+              <Button
+                title={item.completed ? "Mark Incomplete" : "Mark Complete"}
+                onPress={() => setCourseworkCompleted(item, !item.completed)}
+              />
 
               <Button
                 title="Delete"

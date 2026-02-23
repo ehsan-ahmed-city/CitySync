@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Button, SafeAreaView, SectionList, Text, View } from "react-native";
 import * as Calendar from "expo-calendar";
 
+import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
+
 const API_BASE = "http://192.168.0.10:8080";//LAN ip
 const USER_ID = 1;
 
@@ -61,6 +63,16 @@ export default function CalendarScreen() {
   const weekStart = useMemo(() => startOfWeek(new Date()), []);
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
 
+  function estimateTravelMinsFallback(location?: string) {
+    if (!location || location.trim() === "") return null;
+    return 20; //for now till google matrix
+  }
+
+  function calcLeaveTime(eventStart: Date, travelMins: number, bufferMins: number) {
+    const ms = (travelMins + bufferMins) * 60_000;
+    return new Date(eventStart.getTime() - ms);
+  }
+
   async function loadUnifiedWeek() {
     setStatus("requesting calendar permission...");
     try {
@@ -80,15 +92,33 @@ export default function CalendarScreen() {
       //fetch all events within the week range
       const deviceEvents = await Calendar.getEventsAsync(calIds, weekStart, weekEnd);
 
-      const timetableItems: UnifiedItem[] = deviceEvents.map((e) => ({
-        key: `tt-${e.id}`,
-        source: "timetable",
-        title: e.title ?? "(no title)",
-        start: new Date(e.startDate),
-        end: new Date(e.endDate),
-        location: e.location ?? undefined,
-        meta: e.calendarId ? `Calendar: ${e.calendarId}` : undefined,
-      }));
+      const bufferMins = await getLeaveBufferMins();
+
+       const timetableItems: UnifiedItem[] = deviceEvents.map((e) => {
+        const start = new Date(e.startDate);
+        const end = new Date(e.endDate);
+        const location = e.location ?? undefined;
+
+        const travel = estimateTravelMinsFallback(location);
+        const leaveAt = travel != null ? calcLeaveTime(start, travel, bufferMins) : null;
+
+        const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
+        const leaveMeta = leaveAt
+          ? `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          : "";
+
+        const meta = [leaveMeta, calMeta].filter(Boolean).join(" • ") || undefined;
+
+        return {
+          key: `tt-${e.id}`,
+          source: "timetable",
+          title: e.title ?? "(no title)",
+          start,
+          end,
+          location,
+          meta,
+        };
+      });
 
       setStatus("loading coursework from backend...");
       const cwRes = await fetch(`${API_BASE}/users/${USER_ID}/coursework`);
@@ -170,7 +200,7 @@ export default function CalendarScreen() {
 
           <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 }}>
             <Text style={{ fontWeight: "600" }}>
-              {item.source === "timetable" ? "📘" : "📝"} {item.title}
+              [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
             </Text>
             <Text>
 
