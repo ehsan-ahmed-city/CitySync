@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, SafeAreaView, SectionList, Text, View } from "react-native";
+import { Alert, Button, SafeAreaView, SectionList, Text, TextInput, View } from "react-native";
 import * as Calendar from "expo-calendar";
 
 import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
+import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
 
 const API_BASE = "http://192.168.0.10:8080";//LAN ip
 const USER_ID = 1;
+
+const CITY_CAMPUS_DESTINATION = "City, University of London, Northampton Square, London EC1V 0HB";
 
 type CourseworkDto = {
   id: number;
@@ -63,9 +66,35 @@ export default function CalendarScreen() {
   const weekStart = useMemo(() => startOfWeek(new Date()), []);
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
 
-  function estimateTravelMinsFallback(location?: string) {
-    if (!location || location.trim() === "") return null;
-    return 20; //for now till google matrix
+  const [buffer, setBuffer] = useState<number>(10);
+  const [homeLocation, setHomeLocationState] = useState<string>("");
+
+  useEffect(() => {
+    (async () => {
+      setBuffer(await getLeaveBufferMins());
+      setHomeLocationState(await getHomeLocation());
+    })();
+  }, []);
+
+  async function saveBuffer(next: number) {
+    setBuffer(next);
+    await setLeaveBufferMins(next);
+    Alert.alert("Saved", `Leave buffer set to ${next} minutes`);
+    loadUnifiedWeek(); // refreshs the leaveat time
+  }
+
+  async function saveHomeLocation(next: string) {
+    setHomeLocationState(next);
+    await setHomeLocation(next);
+  }
+
+  function estimateTravelMinsHomeToCampusFallback(home: string) {
+    if (!home || home.trim() === "") return null;
+
+    /**for now until GMatrix so if they only postcode, assume 45 mins
+    else full address = 50 mins*/
+    const looksLikePostcode = home.length <= 10;
+    return looksLikePostcode ? 45 : 50;
   }
 
   function calcLeaveTime(eventStart: Date, travelMins: number, bufferMins: number) {
@@ -92,22 +121,26 @@ export default function CalendarScreen() {
       //fetch all events within the week range
       const deviceEvents = await Calendar.getEventsAsync(calIds, weekStart, weekEnd);
 
-      const bufferMins = await getLeaveBufferMins();
+      const bufferMins = buffer;
 
        const timetableItems: UnifiedItem[] = deviceEvents.map((e) => {
         const start = new Date(e.startDate);
         const end = new Date(e.endDate);
         const location = e.location ?? undefined;
 
-        const travel = estimateTravelMinsFallback(location);
+        //fixed destination so travel should be Home to City campus
+        const travel = estimateTravelMinsHomeToCampusFallback(homeLocation);
         const leaveAt = travel != null ? calcLeaveTime(start, travel, bufferMins) : null;
 
         const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
+        const routeMeta =
+          travel != null ? `Route: Home → City campus (${travel} mins)` : "Route: set Home Location";
+
         const leaveMeta = leaveAt
           ? `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
           : "";
 
-        const meta = [leaveMeta, calMeta].filter(Boolean).join(" • ") || undefined;
+        const meta = [leaveMeta, routeMeta, calMeta].filter(Boolean).join(" • ") || undefined;
 
         return {
           key: `tt-${e.id}`,
@@ -184,6 +217,38 @@ export default function CalendarScreen() {
         <Text>Week: {ymd(weekStart)} → {ymd(addDays(weekStart, 6))}</Text>
         <Text>Status: {status}</Text>
         <Button title="Reload unified week" onPress={loadUnifiedWeek} />
+      </View>
+
+      <View style={{ padding: 16, gap: 8 }}>
+        <Text style={{ fontSize: 16, fontWeight: "700" }}>Leave buffer</Text>
+        <Text>Current: {buffer} minutes</Text>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+
+          <Button title="-5" onPress={() => saveBuffer(Math.max(0, buffer - 5))} />
+          <Button title="+5" onPress={() => saveBuffer(buffer + 5)} />
+
+        </View>
+      </View>
+
+
+      <View style={{ padding: 16, gap: 8 }}>
+
+        <Text style={{ fontSize: 16, fontWeight: "700" }}>Home location</Text>
+        <TextInput
+
+          value={homeLocation}
+          onChangeText={saveHomeLocation}
+          placeholder="e.g. LU48AY :D or full address"
+          autoCapitalize="none"
+          style={{ borderWidth: 1, padding: 10 }}
+
+        />
+        <Text style={{ opacity: 0.7 }}>
+
+          Destination: City Uni of London campus
+
+        </Text>
+
       </View>
 
       <SectionList
