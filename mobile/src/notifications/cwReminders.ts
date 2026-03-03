@@ -17,13 +17,17 @@ Notifications.setNotificationHandler({
  //load notification mapping from storage
  async function getMap(): Promise<notifMap>{
     const raw = await AsyncStorage.getItem(StorageKey);
-    return raw ? (JSON.parse(raw) as NotifMap) : {};
+    return raw ? (JSON.parse(raw) as notifMap) : {};
 
+ }
+
+ async function setMap(map: notifMap): Promise<void>{
+    await AsyncStorage.setItem(StorageKey, JSON.stringify(map));
  }
 
  //save same thing to storage
  export async function checkNotifPerms(): Promise<boolean>{
-    const settings = await Notifications.getPermissionsAsync(();
+    const settings = await Notifications.getPermissionsAsync();
     if (
 
         settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL//allow if fully granted or prov
@@ -51,6 +55,7 @@ function parseDueDate(dueDate: string): Date | null {
   //else full ISO string
   const d = new Date(dueDate);
   return isNaN(d.getTime()) ? null : d;
+}
 
 function atMorningSameDay(d: Date, hour = 9): Date {//returns same calendar day at specified hour, default 9am
   const x = new Date(d);
@@ -114,7 +119,7 @@ export async function scheduleCourseworkReminders(//schedule reminder notificati
     return;
   }
 
-  const ok = await ensureNotificationPermission();
+  const ok = await checkNotifPerms();
   if (!ok) return;
 
   await cancelCourseworkReminders(cw.id);//clear old reminders before scheduling new ones

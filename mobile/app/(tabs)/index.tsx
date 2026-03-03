@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { SafeAreaView, Text, TextInput, Button, FlatList, View, Alert, ScrollView } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,View,} from "react-native";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
@@ -21,6 +21,52 @@ type CourseworkDto = {
   completed?: boolean;
   completedAt?: string | null;
 };
+
+function Pill({ label }: { label: string }){
+//using pill for stats for modules, cw, and pending
+  return (
+
+    <View style={styles.pill}>
+      <Text style={styles.pillText}>{label}</Text>
+    </View>
+  );
+
+}
+
+function PrimBtn({ title, onPress }: { title: string; onPress: () => void }){
+//primary action button in app
+  return (//reduces opacity when pressed
+
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}>
+
+      <Text style={styles.btnPrimaryText}>{title}</Text>
+    </Pressable>
+
+  );
+}
+
+function SecBtn({ title, onPress }: { title: string; onPress: () => void }){
+//secondary button as neutral
+  return (
+
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.btnSecondary, pressed && { opacity: 0.85 }]}>
+
+      <Text style={styles.btnSecondaryText}>{title}</Text>
+    </Pressable>
+
+  );
+}
+
+function DangerBtn({ title, onPress }: { title: string; onPress: () => void }){
+//for stuff like delete
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.btnDanger, pressed && { opacity: 0.85 }]}>
+
+      <Text style={styles.btnDangerText}>{title}</Text>
+      
+    </Pressable>
+  );
+}
 
 export default function HomeScreen() {
   //lists
@@ -323,7 +369,15 @@ export default function HomeScreen() {
     return Math.floor(ms / (1000 * 60 * 60 * 24));
   }
 
-
+  const stats = useMemo(() => {
+    const completedCount = coursework.filter((c) => c.completed).length;
+    return {
+      modules: modules.length,
+      coursework: coursework.length,
+      completed: completedCount,
+      pending: coursework.length - completedCount,
+    };
+  }, [modules.length, coursework]);
 
   //on screen load fetch both lists
   useEffect(() => {
@@ -332,182 +386,203 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 24 }}>
-        <Text style={{ fontSize: 20, fontWeight: "600", marginBottom: 12 }}>
-          CitySync (User {USER_ID})
-        </Text>
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView contentContainerStyle={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>CitySync</Text>
+            <Text style={styles.subTitle}>User {USER_ID} • {status}</Text>
+            <View style={styles.pillRow}>
+              <Pill label={`Modules: ${stats.modules}`} />
+              <Pill label={`Coursework: ${stats.coursework}`} />
+              <Pill label={`Pending: ${stats.pending}`} />
+            </View>
 
-        <Text>API: {API_BASE}</Text>
-        <Text>Status: {status}</Text>
+            <View style={styles.headerBtns}>
+              <SecondaryButton title="Refresh" onPress={() => { loadModules(); loadCoursework(); }} />
+            </View>
+          </View>
 
-        {/* Create module */}
-        <Text style={{ fontSize: 16, fontWeight: "600", marginTop: 12, marginBottom: 6 }}>
-          Add Module
-        </Text>
+          {/* Add Module */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Add module</Text>
 
-        <View style={{ gap: 8, marginBottom: 12 }}>
-          <TextInput value={mCode} onChangeText={setMCode} placeholder="Code" style={{ borderWidth: 1, padding: 10 }} />
-          <TextInput value={mName} onChangeText={setMName} placeholder="Name" style={{ borderWidth: 1, padding: 10 }} />
-          <TextInput
-            value={mCredits}
-            onChangeText={setMCredits}
-            placeholder="Credits"
-            keyboardType="numeric"
-            style={{ borderWidth: 1, padding: 10 }}
-          />
-          <Button title="Create Module" onPress={createModule} />
-          <Button title="Refresh Modules" onPress={loadModules} />
-        </View>
-
-        {/* Module list */}
-        <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
-          Modules ({modules.length})
-        </Text>
-
-        <FlatList
-          data={modules}
-          keyExtractor={(item) => String(item.id)}
-          scrollEnabled={false}
-//           scrollView for scrolling
-          renderItem={({ item }) => (
-            <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
-              <Text>{item.code} — {item.name}</Text>
-              <Text>Credits: {item.credits ?? "n/a"} | Module ID: {item.id}</Text>
-
-              <View style={{ marginTop: 8, gap: 8 }}>
-                <Button
-
-                  title="Quick Rename to 'Updated'"
-                  onPress={() => updateModule(item.id, { name: "Updated" })}
-                />
-                <Button
-
-                  title="Delete Module"
-                  onPress={() =>
-                    Alert.alert(
-                      "Delete module?",
-                      "This will also delete it's coursework",
-                      [
-
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Delete", style: "destructive", onPress: () => deleteModule(item.id) },
-
-                      ]
-                    )
-                  }
-                />
+            <View style={styles.formRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Code</Text>
+                <TextInput value={mCode} onChangeText={setMCode} style={styles.input} placeholder="e.g. IN3007" />
+              </View>
+              <View style={{ width: 110 }}>
+                <Text style={styles.label}>Credits</Text>
+                <TextInput value={mCredits} onChangeText={setMCredits} style={styles.input} keyboardType="numeric" />
               </View>
             </View>
-          )}
-          ListEmptyComponent={<Text>No modules yet.</Text>}
-        />
 
-        {/* Create coursework */}
+            <Text style={styles.label}>Name</Text>
+            <TextInput value={mName} onChangeText={setMName} style={styles.input} placeholder="Module name" />
 
-        <Text style={{ fontSize: 16, fontWeight: "600", marginTop: 14, marginBottom: 6 }}>
-          Add Coursework
-        </Text>
+            <View style={styles.rowGap}>
+              <PrimBtn title="Create module" onPress={createModule} />
+            </View>
+          </View>
 
-        <View style={{ gap: 8, marginBottom: 12 }}>
-          <TextInput
-            value={cwModuleId}
-            onChangeText={setCwModuleId}
-            placeholder="Module ID"
-            keyboardType="numeric"
-            style={{ borderWidth: 1, padding: 10 }}
-          />
+          {/* Modules list */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Modules</Text>
 
-          <TextInput value={cwTitle} onChangeText={setCwTitle} placeholder="Title" style={{ borderWidth: 1, padding: 10 }} />
-          <TextInput
-            value={cwDueDate}
-            onChangeText={setCwDueDate}
-            placeholder="Due Date (YYYY-MM-DD)"
-            style={{ borderWidth: 1, padding: 10 }}
+            <FlatList
+              data={modules}
+              keyExtractor={(m) => String(m.id)}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              renderItem={({ item }) => (
+                <View style={styles.itemCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemTitle}>{item.code}</Text>
+                    <Text style={styles.itemSub}>{item.name}</Text>
+                    <Text style={styles.muted}>Credits: {item.credits ?? "n/a"} • ID: {item.id}</Text>
+                  </View>
 
-          />
+                  <View style={{ gap: 8 }}>
+                    <SecBtn title="Rename" onPress={() => updateModule(item.id, { name: "Updated" })} />
+                    <DangerBtn
+                      title="Delete"
+                      onPress={() =>
+                        Alert.alert(
+                          "Delete module?",
+                          "This will also delete it's coursework",
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            { text: "Delete", style: "destructive", onPress: () => deleteModule(item.id) },
+                          ]
+                        )
+                      }
+                    />
+                  </View>
+                </View>
+              )}
+              ListEmptyComponent={<Text style={styles.muted}>No modules yet.</Text>}
+            />
+          </View>
 
-          <TextInput
-            value={cwWeighting}
-            onChangeText={setCwWeighting}
-            placeholder="Weighting"
-            keyboardType="numeric"
-            style={{ borderWidth: 1, padding: 10 }}
-          />
+          {/* Add Coursework */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Add coursework</Text>
 
-          <Button title="Create Coursework" onPress={createCoursework} />
-          <Button title="Refresh Coursework" onPress={loadCoursework} />
-        </View>
-
-
-        {/* Coursework list */}
-
-        <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
-          Coursework ({coursework.length})
-        </Text>
-
-        <FlatList
-          data={coursework}
-          keyExtractor={(item) => String(item.id)}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <View style={{ padding: 10, borderWidth: 1, marginBottom: 8 }}>
-              <Text>{item.title}</Text>
-              <Text>Due: {item.dueDate} | Weighting: {item.weighting ?? "n/a"}%</Text>
-              <Text>Module ID: {item.moduleId}</Text>
-
-              {/*completion UI */}
-              <Text>Status: {item.completed ? "completed" : "pending"}</Text>
-
-              {!item.completed ? (
-                (() => {
-                  const dl = daysUntil(item.dueDate);
-                  const lvl = getReminderLevel(dl);
-                  return (
-                    <Text>
-                      Reminder: {lvl.label} ({lvl.freq})
-                    </Text>
-                  );
-                })()
-              ) : null}
-
-              <Button
-                title={item.completed ? "Mark Incomplete" : "Mark Complete"}
-                onPress={() => setCourseworkCompleted(item, !item.completed)}
-              />
-
-              <Button
-                title="Delete"
-                onPress={async () => {
-                  try {
-                    const res = await fetch(
-                      `${API_BASE}/users/${USER_ID}/modules/${item.moduleId}/coursework/${item.id}`,
-                      { method: "DELETE" }
-                    );
-
-                    if (!res.ok) {
-                      const txt = await res.text();
-                      Alert.alert("Delete failed", `${res.status}\n${txt}`);
-                      return;
-                    }
-
-                    await loadCoursework();
-                    setStatus(`deleted coursework ${item.id}`);
-                  } catch (e: any) {
-                    Alert.alert("Delete error", String(e?.message ?? e));
-                  }
-                }}
-              />
-
+            <View style={styles.formRow}>
+              <View style={{ width: 110 }}>
+                <Text style={styles.label}>Module ID</Text>
+                <TextInput value={cwModuleId} onChangeText={setCwModuleId} style={styles.input} keyboardType="numeric" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Due date</Text>
+                <TextInput value={cwDueDate} onChangeText={setCwDueDate} style={styles.input} placeholder="YYYY-MM-DD" />
+              </View>
+              <View style={{ width: 110 }}>
+                <Text style={styles.label}>Weight %</Text>
+                <TextInput value={cwWeighting} onChangeText={setCwWeighting} style={styles.input} keyboardType="numeric" />
+              </View>
             </View>
 
-          )}
-          ListEmptyComponent={<Text>No coursework yet.</Text>}
-        />
+            <Text style={styles.label}>Title</Text>
+            <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" />
 
-        <View style={{ height: 24 }} />
-      </ScrollView>
+            <View style={styles.rowGap}>
+              <PrimaryBtn title="Create coursework" onPress={createCoursework} />
+            </View>
+          </View>
+
+          {/* Coursework list */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Coursework</Text>
+
+            <FlatList
+              data={coursework}
+              keyExtractor={(c) => String(c.id)}
+              scrollEnabled={false}
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              renderItem={({ item }) => {
+                const dl = daysUntil(item.dueDate);
+                const lvl = getReminderLevel(dl);
+
+                return (
+                  <View style={styles.itemCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemTitle}>{item.title}</Text>
+                      <Text style={styles.muted}>
+                        Due: {item.dueDate} • Module: {item.moduleId} • Weight: {item.weighting ?? "n/a"}%
+                      </Text>
+
+                      <Text style={styles.badge}>
+                        {item.completed ? "completed" : "pending"}
+                      </Text>
+
+                      {!item.completed ? (
+                        (() => {
+                          return (
+                            <Text style={styles.muted}>
+                              Reminder: {lvl.label} ({lvl.freq})
+                            </Text>
+                          );
+                        })()
+                      ) : null}
+                    </View>
+
+                    <View style={{ gap: 8 }}>
+                      <SecBtn
+                        title={item.completed ? "Mark Incomplete" : "Mark Complete"}
+                        onPress={() => setCourseworkCompleted(item, !item.completed)}
+                      />
+                    </View>
+                  </View>
+                );
+              }}
+              ListEmptyComponent={<Text style={styles.muted}>No coursework yet.</Text>}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
-
   );
 }
+
+const styles = StyleSheet.create({
+
+  safe: { flex: 1, backgroundColor: "#0b0b0f" },container: { padding: 16, paddingBottom: 40, gap: 14 },//page padding/spacing
+                   //^app bg
+  header: { padding: 16, borderRadius: 18, backgroundColor: "#14141a", borderWidth: 1, borderColor: "#232331" },
+  title: { fontSize: 28, fontWeight: "800", color: "white" },//title text
+  subTitle: { marginTop: 6, color: "#a9a9b6" }, //subtitle text
+
+  pillRow: { marginTop: 12, flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  pill: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: "#1f1f2a", borderWidth: 1, borderColor: "#2b2b3b" },//container
+  pillText: { color: "#d6d6df", fontWeight: "600" },//pill label
+
+  headerBtns: { marginTop: 12, flexDirection: "row", gap: 10 },
+  //^header button row
+
+  card: { padding: 16, borderRadius: 18, backgroundColor: "#14141a", borderWidth: 1, borderColor: "#232331" },//sectn card container
+  cardTitle: { color: "white", fontSize: 16, fontWeight: "800", marginBottom: 10 },
+  label: { color: "#a9a9b6", marginBottom: 6, fontWeight: "600" },//the input label
+  input: { backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 12, padding: 12, color: "white" },
+  formRow: { flexDirection: "row", gap: 10, marginBottom: 12 },//row layot for grouped inputs
+  rowGap: { marginTop: 12, gap: 10 },//spacing between button/rows
+
+  itemCard: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#262638" }, // list item card
+  itemTitle: { color: "white", fontSize: 15, fontWeight: "800" },//title
+  itemSub: { color: "#d6d6df", marginTop: 3, fontWeight: "600" },//item subtitle
+
+  muted: { color: "#a9a9b6", marginTop: 6 },
+  //^any text underneath
+
+  btnPrimary: { backgroundColor: "#3b82f6", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
+  btnPrimaryText: { color: "white", fontWeight: "800" },//primary button text
+
+  btnSecondary: { backgroundColor: "#1f1f2a", borderWidth: 1, borderColor: "#2b2b3b", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // secondary button
+  btnSecondaryText: { color: "white", fontWeight: "700" }, //secondary button text
+  btnDanger: { backgroundColor: "#2a1214", borderWidth: 1, borderColor: "#4b1c21", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // destructive button
+  btnDangerText: { color: "#ffb4bc", fontWeight: "800" },//delete buttons so it standss out
+
+  badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status chip (completed/pending etc)
+});
