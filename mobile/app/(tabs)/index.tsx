@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,View,} from "react-native";
+import { Picker } from "@react-native-picker/picker";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
@@ -63,7 +64,7 @@ function DangerBtn({ title, onPress }: { title: string; onPress: () => void }){
     <Pressable onPress={onPress} style={({ pressed }) => [styles.btnDanger, pressed && { opacity: 0.85 }]}>
 
       <Text style={styles.btnDangerText}>{title}</Text>
-      
+
     </Pressable>
   );
 }
@@ -81,7 +82,7 @@ export default function HomeScreen() {
   const [mCredits, setMCredits] = useState("45");
 
   //coursework form
-  const [cwModuleId, setCwModuleId] = useState("1");
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
   const [cwTitle, setCwTitle] = useState("PDD submission");
   const [cwDueDate, setCwDueDate] = useState("2026-02-09");
   const [cwWeighting, setCwWeighting] = useState("30");
@@ -103,6 +104,13 @@ export default function HomeScreen() {
 
       const json = JSON.parse(txt) as ModuleDto[];
       setModules(json);
+
+      if (json.length > 0 && selectedModuleId == null) {
+
+        setSelectedModuleId(json[0].id);
+        //^defaults to first module if isnt selected
+      }
+
       setStatus(`loaded ${json.length} modules`);
     } catch (e: any) {
 
@@ -177,12 +185,17 @@ export default function HomeScreen() {
 
 
   async function createCoursework() {//POST/users/{id}/modules/{moduleId}/coursework
+
+    if (selectedModuleId == null) {
+      Alert.alert("No modules", "Create a module first.");
+      //cant create cw unless a module is selected
+      return;
+    }
+
     setStatus("creating coursework...");
     try {
 
-      const moduleIdNum = Number(cwModuleId);
-
-      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules/${moduleIdNum}/coursework`, {
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules/${selectedModuleId}/coursework`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -390,17 +403,19 @@ export default function HomeScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.container}>
           {/* Header */}
+
           <View style={styles.header}>
             <Text style={styles.title}>CitySync</Text>
             <Text style={styles.subTitle}>User {USER_ID} • {status}</Text>
             <View style={styles.pillRow}>
+
               <Pill label={`Modules: ${stats.modules}`} />
               <Pill label={`Coursework: ${stats.coursework}`} />
               <Pill label={`Pending: ${stats.pending}`} />
             </View>
 
             <View style={styles.headerBtns}>
-              <SecondaryButton title="Refresh" onPress={() => { loadModules(); loadCoursework(); }} />
+              <SecBtn title="Refresh" onPress={() => { loadModules(); loadCoursework(); }} />
             </View>
           </View>
 
@@ -437,6 +452,7 @@ export default function HomeScreen() {
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
               renderItem={({ item }) => (
+
                 <View style={styles.itemCard}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemTitle}>{item.code}</Text>
@@ -466,20 +482,40 @@ export default function HomeScreen() {
             />
           </View>
 
-          {/* Add Coursework */}
+          {/*Add cw */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Add coursework</Text>
 
+            {/*changing module dropdown from id to text*/}
+            <View style={{ borderWidth: 1, borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
+              <Picker
+                selectedValue={selectedModuleId}
+                onValueChange={(v) => setSelectedModuleId(v)}
+              >
+              {/*dropdown optins from the modules*/}
+                {modules.map((m) => (
+
+                  <Picker.Item
+                    key={m.id}//for react list
+
+                    label={`${m.code} — ${m.name} (ID ${m.id})`}
+                    //^what user sees
+                    value={m.id}//set into the module thats selected
+                  />
+
+                ))}
+              </Picker>
+            </View>
+
             <View style={styles.formRow}>
-              <View style={{ width: 110 }}>
-                <Text style={styles.label}>Module ID</Text>
-                <TextInput value={cwModuleId} onChangeText={setCwModuleId} style={styles.input} keyboardType="numeric" />
-              </View>
               <View style={{ flex: 1 }}>
+
                 <Text style={styles.label}>Due date</Text>
+
                 <TextInput value={cwDueDate} onChangeText={setCwDueDate} style={styles.input} placeholder="YYYY-MM-DD" />
               </View>
               <View style={{ width: 110 }}>
+
                 <Text style={styles.label}>Weight %</Text>
                 <TextInput value={cwWeighting} onChangeText={setCwWeighting} style={styles.input} keyboardType="numeric" />
               </View>
@@ -489,7 +525,7 @@ export default function HomeScreen() {
             <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" />
 
             <View style={styles.rowGap}>
-              <PrimaryBtn title="Create coursework" onPress={createCoursework} />
+              <PrimBtn title="Create coursework" onPress={createCoursework} />
             </View>
           </View>
 
@@ -503,10 +539,12 @@ export default function HomeScreen() {
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
               renderItem={({ item }) => {
+
                 const dl = daysUntil(item.dueDate);
                 const lvl = getReminderLevel(dl);
 
                 return (
+
                   <View style={styles.itemCard}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.itemTitle}>{item.title}</Text>
@@ -521,9 +559,11 @@ export default function HomeScreen() {
                       {!item.completed ? (
                         (() => {
                           return (
+
                             <Text style={styles.muted}>
                               Reminder: {lvl.label} ({lvl.freq})
                             </Text>
+
                           );
                         })()
                       ) : null}
@@ -541,9 +581,12 @@ export default function HomeScreen() {
               ListEmptyComponent={<Text style={styles.muted}>No coursework yet.</Text>}
             />
           </View>
+
         </ScrollView>
+
       </KeyboardAvoidingView>
     </SafeAreaView>
+
   );
 }
 
@@ -581,8 +624,11 @@ const styles = StyleSheet.create({
 
   btnSecondary: { backgroundColor: "#1f1f2a", borderWidth: 1, borderColor: "#2b2b3b", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // secondary button
   btnSecondaryText: { color: "white", fontWeight: "700" }, //secondary button text
+
   btnDanger: { backgroundColor: "#2a1214", borderWidth: 1, borderColor: "#4b1c21", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // destructive button
-  btnDangerText: { color: "#ffb4bc", fontWeight: "800" },//delete buttons so it standss out
+  btnDangerText: { color: "#ffb4bc", fontWeight: "800" },//delete buttons so it stands out
 
   badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status chip (completed/pending etc)
+
+
 });
