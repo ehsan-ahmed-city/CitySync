@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { SafeAreaView, Text, TextInput, Button, FlatList, View, Alert, ScrollView } from "react-native";
 
+import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
+//^importing to index from cwreminder
+
 const API_BASE = "http://192.168.0.10:8080";//my laptop LAN ip
 const USER_ID = 1;
 
@@ -143,13 +146,20 @@ export default function HomeScreen() {
         }),
       });
 
-      if (!res.ok) {
+      if (!res.ok) {//for backend failurs
 
         const txt = await res.text();
         setStatus(`create coursework failed ${res.status}`);
         Alert.alert("Create Coursework failed", `${res.status}\n${txt}`);
         return;
 
+      }
+
+      const created = (await res.json()) as CourseworkDto;//new created cw parsed from backend
+
+      const ok = await checkNotifPerms ();//to check notif permission and schedule reminders
+      if(ok){
+        await scheduleCourseworkReminders(created);
       }
 
       setStatus("create coursework ok, refreshing...");
@@ -272,7 +282,22 @@ export default function HomeScreen() {
         return;
 
       }
-      await loadCoursework();
+
+      const updated = (await res.json()) as CourseworkDto;//parse updated cw from backend
+
+      const ok = await checkNotifPerms();//to check notification perms enabled
+      if(ok){
+
+        if(updated.completed){
+            await cancelCourseworkReminders(updated.id);
+            //if cw complete then cancel all scheduled reminders for it
+        }else{
+            await scheduleCourseworkReminders(updated)//else if still incomplete then rechedule reminders for due date
+        }
+
+      }
+
+      await loadCoursework();//refreshs list after with backend state
 
       setStatus(`coursework ${item.id} completed=${completed}`);
     } catch (e: any) {
