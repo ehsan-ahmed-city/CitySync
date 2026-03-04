@@ -1,112 +1,312 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from "react";
+import {Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView,StyleSheet,
+  Text, TextInput, View,} from "react-native";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const API_BASE = "http://192.168.0.10:8080";
+const USER_ID = 1;
 
-export default function TabTwoScreen() {
+const C = { bg: "#0B0B10", card: "#12121A", card2: "#161622", border: "rgba(255,255,255,0.08)",
+  text: "#FFFFFF", sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#3B82F6",
+  danger: "#EF4444",success: "#22C55E",};//colour pallete for settings
+
+type Prefs = { //from backend preferences
+  homeAddress: string | null;
+  UniLoc: string | null;
+  bufferMins: number | null;
+};
+
+
+
+function PrimBtn({ title, onPress, disabled }: {title: string; onPress: () => void; disabled?: boolean }){
+//^primary action button
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+
+      style={({ pressed }) => ({
+
+        backgroundColor: disabled ? C.muted : C.primary,
+        paddingVertical: 14,
+        borderRadius: 14,
+        alignItems: "center",
+        opacity: pressed ? 0.8 : 1,//opacity lower for feedback
+
+      })}
+    >
+      <Text style={{ color: C.text, fontWeight: "800", fontSize: 15 }}>{title}</Text>
+    </Pressable>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+//card wrpper for each section
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>{title}</Text>
+
+      {children}
+    </View>
+  );
+}
+
+function FieldLabel({ label }: { label: string }) {
+
+//for from fields
+  return <Text style={styles.fieldLabel}>{label}</Text>;
+}
+
+
+
+export default function SettingsScreen() {
+
+  const [homeAddress, setHomeAddress] = useState("");//what the user can change is home address
+  const [uniAddress, setUniAddress] = useState(
+    "City St George's, University of London, Northampton Square, London EC1V 0HB"//uni address is fixed
+  );
+  const [bufferMins, setBufferMins] = useState("10");
+
+  //shows status to user like loading or ok or error
+  const [status, setStatus] = useState<{ msg: string; type: "idle" | "ok" | "error" | "loading" }>({
+    msg: "",
+    type: "idle",
+  });
+
+
+
+  useEffect(() => {
+    loadPrefs();  //load saved prefs from backend on mount
+  }, []);
+
+  async function loadPrefs() {
+    setStatus({ msg: "Loading preferences...", type: "loading" });
+    try {
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/preferences`);
+      if (!res.ok) {
+
+        setStatus({ msg: `Failed to load (${res.status})`, type: "error" });
+        return;
+      }
+      const data = (await res.json()) as Prefs;
+
+      //Ui shows data it got from backend
+      if (data.homeAddress) setHomeAddress(data.homeAddress);
+      if (data.UniLoc) setUniAddress(data.UniLoc);
+      if (data.bufferMins != null) setBufferMins(String(data.bufferMins));
+
+      setStatus({ msg: "Preferences loaded", type: "ok" });
+
+    } catch (e: any) {
+
+      setStatus({ msg: `Load error: ${e?.message ?? e}`, type: "error" });
+        //^only if it cant load the data
+    }
+  }
+
+  async function savePrefs() {
+    const bufferNum = parseInt(bufferMins, 10);//parsing buffer string to num for backend
+
+    if (isNaN(bufferNum) || bufferNum < 0 || bufferNum > 300) {
+      Alert.alert("Buffer has to be a number", "Buffer can be between 0 and 300 minutes");
+      return;
+    }
+
+    if (!homeAddress.trim()) {
+      Alert.alert("Home address required", "Enter your home address/postcode to get travel time");
+      return;
+    }
+
+    setStatus({ msg: "Saving...", type: "loading" });
+
+    try {
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/preferences`, {
+
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeAddress: homeAddress.trim(),
+          UniLoc: uniAddress.trim(),
+          bufferMins: bufferNum,
+        }),
+
+        //uses the values from user preferences via await
+      });
+
+      if (!res.ok) {//error message if invalid response form bakcend
+        const txt = await res.text();
+        setStatus({ msg: `Save failed (${res.status})`, type: "error" });
+        Alert.alert("Save failed", `${res.status}\n${txt}`);
+        return;
+      }
+
+      const saved = (await res.json()) as Prefs;
+      if (saved.bufferMins != null) setBufferMins(String(saved.bufferMins));
+      setStatus({ msg: "Preferences saved ", type: "ok" });
+      Alert.alert("Saved", "Your preferences have been updated reload the Calendar tab to recalculate leave times.");
+    } catch (e: any) {
+      setStatus({ msg: `Save error: ${e?.message ?? e}`, type: "error" });
+    }
+  }
+
+  function adjustBuffer(delta: number) {
+    const current = parseInt(bufferMins, 10) || 0;
+    const next = Math.max(0, Math.min(300, current + delta));
+    setBufferMins(String(next));
+  }
+
+  const statusColour =
+    status.type === "ok" ? C.success : status.type === "error" ? C.danger : C.muted;
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+
+          {/*Header */}
+          <Text style={styles.heading}>Settings</Text>
+          {status.msg ? (
+            <Text style={[styles.statusText, { color: statusColour }]}>{status.msg}</Text>
+          ) : null}
+
+          {/*Travel settings */}
+          <SectionCard title="Travel Settings">
+
+            <FieldLabel label="Home address or postcode" />
+
+            <TextInput
+
+              value={homeAddress}
+              onChangeText={setHomeAddress}
+              placeholder="e.g. LU4 8AY or 123 Portland road, Luton"
+              //^example address for users which is mine
+              placeholderTextColor={C.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.input}
+
+            />
+            <Text style={styles.hint}>
+
+              Used to calculate your travel time to City University A postcode also works.
+
+            </Text>
+
+            <FieldLabel label="Destination (pre-filled)" />
+
+            <TextInput
+
+              value={uniAddress}
+              onChangeText={setUniAddress}
+              placeholderTextColor={C.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.input}
+            />
+            <Text style={styles.hint}>
+
+              Change this if your lectures are at different location.
+
+            </Text>
+          </SectionCard>
+
+          {/* Buffer settings */}
+          <SectionCard title="Leave buffer">
+
+            <Text style={styles.sub}>
+              Extra minutes added on top of travel time before your lecture starts.
+
+            </Text>
+
+            <View style={styles.bufferRow}>
+              <Pressable
+                onPress={() => adjustBuffer(-5)}
+                style={({ pressed }) => [styles.bufferBtn, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={styles.bufferBtnText}>−5</Text>
+              </Pressable>
+
+              <View style={styles.bufferDisplay}>
+                <Text style={styles.bufferValue}>{bufferMins}</Text>
+                <Text style={styles.bufferUnit}>mins</Text>
+              </View>
+
+              <Pressable
+                onPress={() => adjustBuffer(5)}
+                style={({ pressed }) => [styles.bufferBtn, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Text style={styles.bufferBtnText}>+5</Text>
+              </Pressable>
+            </View>
+
+            <TextInput
+              value={bufferMins}
+              onChangeText={setBufferMins}
+              keyboardType="numeric"
+              placeholder="or type a number"
+              placeholderTextColor={C.muted}
+              style={[styles.input, { textAlign: "center" }]}
+            />
+            <Text style={styles.hint}>Max 300 minutes(5 hours), default is 10 mins.</Text>
+          </SectionCard>
+
+          {/*talks how leave-soon works */}
+          <SectionCard title="How leave soon alerts work">
+            <Text style={styles.sub}>
+              CitySync calculates your leave time as:{"\n\n"}
+              <Text style={{ color: C.primary, fontWeight: "700" }}>
+                Lecture start − (travel time + your buffer)
+              </Text>
+
+              {"\n\n"}
+              A push notification goes at exactly that time, even if the app is closed.
+              Travel time is fetched live from Google Routes API. If that fials then CitySync
+              uses a static estimate based on your postcode.
+
+            </Text>
+          </SectionCard>
+
+          {/*Save button */}
+          <PrimBtn title="Save Preferences" onPress={savePrefs} disabled={status.type === "loading"} />
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+
+      </KeyboardAvoidingView>
+
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+
+  safe: {flex: 1,backgroundColor: C.bg,},
+  scroll: {padding: 20,gap: 16,},
+  heading: {fontSize: 28,fontWeight: "800",color: C.text,marginBottom: 4,},
+  statusText: {
+    fontSize: 13,
+    marginBottom: 8,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+
+  card: {backgroundColor: C.card,borderRadius: 16,padding: 16,gap: 10,borderWidth: 1,borderColor: C.border,},
+  cardTitle: {fontSize: 16,fontWeight: "700",color: C.text, marginBottom: 4,
+  },fieldLabel: {fontSize: 13,fontWeight: "600",color: C.sub,},
+
+  input: {backgroundColor: C.card2,borderWidth: 1,borderColor: C.border,borderRadius: 10,padding: 12,color: C.text,fontSize: 14,},
+  hint: {fontSize: 12,color: C.muted,},
+  sub: {fontSize: 13,color: C.sub,lineHeight: 20,},
+
+  bufferRow: {flexDirection: "row",alignItems: "center",justifyContent: "center",gap: 20,marginVertical: 8,},
+  bufferBtn: {backgroundColor: C.card2,borderWidth: 1,borderColor: C.border,borderRadius: 12,width: 56,height: 56,
+    alignItems: "center",justifyContent: "center",},
+  bufferBtnText: {color: C.text,fontSize: 20,fontWeight: "700",},
+
+  bufferDisplay: {alignItems: "center",minWidth: 80,},
+  bufferValue: {color: C.primary,fontSize: 40,fontWeight: "800",},
+  bufferUnit: {color: C.muted, fontSize: 13,},
 });
