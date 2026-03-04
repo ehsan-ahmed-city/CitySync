@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Button, SafeAreaView, SectionList, Text, TextInput, View } from "react-native";
 import * as Calendar from "expo-calendar";
+import * as Notifications from "expo-notifications";
 
 import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
 import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
@@ -9,6 +10,17 @@ const API_BASE = "http://192.168.0.10:8080";//LAN ip
 const USER_ID = 1;
 
 const CITY_CAMPUS_DESTINATION = "City, University of London, Northampton Square, London EC1V 0HB";
+
+//stores leave notification ids so we can cancel them on reload
+const leavenotif = "citysync.leaveSoonNotifIds.v1";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 type CourseworkDto = {
   id: number;
@@ -59,6 +71,104 @@ function parseDueDateAsEndOfDay(yyyyMmDd: string) {
   return dt;
 }
 
+async function fetchTravelMins(home: string) {
+  //calls backend /travel which proxies to google routes and returns seconds + fallback flag
+  if (!home || home.trim() === "") return null;
+
+  try {
+
+    const url =
+      `${API_BASE}/travel` +
+      `?origin=${encodeURIComponent(home.trim())}` + //encode so spaces/postcodes work in a URL
+      `&destination=${encodeURIComponent(CITY_CAMPUS_DESTINATION)}`;
+
+    const res = await fetch(url);
+    if (!res.ok) return null;
+
+    const json = (await res.json()) as { seconds: number; fallback: boolean };
+
+    //if backend says fallback=true, it couldn't reach google -> return null so our local estimator is used
+    if (json.fallback || json.seconds <= 0) return null;
+
+    return Math.ceil(json.seconds / 60); // seconds -> mins (round up so you don't underestimate)
+  } catch {
+
+    return null;
+  }
+}
+
+function estimateTravelMinsHomeToCampusFallback(home: string) {
+  if (!home || home.trim() === "") return null;
+
+  /**for now until GMatrix so if they only postcode, assume 45 mins
+    else full address = 50 mins*/
+  const looksLikePostcode = home.length <= 10;
+  return looksLikePostcode ? 45 : 50;
+}
+
+function calcLeaveTime(eventStart: Date, travelMins: number, bufferMins: number) {
+  const ms = (travelMins + bufferMins) * 60_000;
+  return new Date(eventStart.getTime() - ms);
+}
+
+async function cancelAllLeaveSoonNotifs() {
+  //cancel all previous leave-soon notifications so we don't stack duplicates on every reload
+  try {
+
+    const { default: AsyncStorage } = await import("@react-native-async-storage/async-storage");
+
+    const raw = await AsyncStorage.getItem(leavenotif);
+    if (!raw) return;
+
+    const ids = JSON.parse(raw) as string[];
+
+    await Promise.all(
+      ids.map(async (id) => {
+        try {
+          await Notifications.cancelScheduledNotificationAsync(id);
+        } catch {
+          //ignore if already cancelled/expired
+        }
+      })
+    );
+
+    await AsyncStorage.removeItem(leavenotif);
+
+  } catch {
+    //ignore storage errors
+  }
+}
+
+async function scheduleLeaveSoonNotif(
+  eventTitle: string,
+  leaveAt: Date,
+  travelMins: number,
+  bufferMins: number
+) {
+  //dont schedule if time already passed (or is basically now)
+  if (leaveAt.getTime() <= Date.now() + 5_000) return null;
+
+  try {
+
+    const id = await Notifications.scheduleNotificationAsync({
+
+      content: {
+
+        title: "CitySync: Time to leave!",
+        body: `Leave now for "${eventTitle}" — ${travelMins} min journey + ${bufferMins} min buffer`,
+        data: { type: "leave_soon", eventTitle },
+      },
+      trigger: leaveAt, //activates at leaveAt Date
+    });
+
+    return id;
+
+  } catch {
+
+    return null;
+  }
+}
+
 export default function CalendarScreen() {
   const [status, setStatus] = useState("idle");
   const [sections, setSections] = useState<{ title: string; data: UnifiedItem[] }[]>([]);
@@ -69,6 +179,7 @@ export default function CalendarScreen() {
   const [buffer, setBuffer] = useState<number>(10);
   const [homeLocation, setHomeLocationState] = useState<string>("");
 
+  const [travelSource, setTravelSource] = useState<"google" | "fallback" | "none">("none");
   useEffect(() => {
     (async () => {
       setBuffer(await getLeaveBufferMins());
@@ -86,20 +197,6 @@ export default function CalendarScreen() {
   async function saveHomeLocation(next: string) {
     setHomeLocationState(next);
     await setHomeLocation(next);
-  }
-
-  function estimateTravelMinsHomeToCampusFallback(home: string) {
-    if (!home || home.trim() === "") return null;
-
-    /**for now until GMatrix so if they only postcode, assume 45 mins
-    else full address = 50 mins*/
-    const looksLikePostcode = home.length <= 10;
-    return looksLikePostcode ? 45 : 50;
-  }
-
-  function calcLeaveTime(eventStart: Date, travelMins: number, bufferMins: number) {
-    const ms = (travelMins + bufferMins) * 60_000;
-    return new Date(eventStart.getTime() - ms);
   }
 
   async function loadUnifiedWeek() {
@@ -123,35 +220,85 @@ export default function CalendarScreen() {
 
       const bufferMins = buffer;
 
-       const timetableItems: UnifiedItem[] = deviceEvents.map((e) => {
-        const start = new Date(e.startDate);
-        const end = new Date(e.endDate);
-        const location = e.location ?? undefined;
+      //try backend google routes first, else fallback estimate
+      setStatus("fetching travel time...");
 
-        //fixed destination so travel should be Home to City campus
-        const travel = estimateTravelMinsHomeToCampusFallback(homeLocation);
-        const leaveAt = travel != null ? calcLeaveTime(start, travel, bufferMins) : null;
+      let travelMins = await fetchTravelMins(homeLocation);
 
-        const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
-        const routeMeta =
-          travel != null ? `Route: Home → City campus (${travel} mins)` : "Route: set Home Location";
+      if (travelMins != null) {
 
-        const leaveMeta = leaveAt
-          ? `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-          : "";
+        setTravelSource("google");
 
-        const meta = [leaveMeta, routeMeta, calMeta].filter(Boolean).join(" • ") || undefined;
+      } else {
 
-        return {
-          key: `tt-${e.id}`,
-          source: "timetable",
-          title: e.title ?? "(no title)",
-          start,
-          end,
-          location,
-          meta,
-        };
-      });
+        travelMins = estimateTravelMinsHomeToCampusFallback(homeLocation);
+        setTravelSource(travelMins != null ? "fallback" : "none");
+
+      }
+
+      //cancel old leave alerts before we schedule new ones
+      await cancelAllLeaveSoonNotifs();
+
+      //ask notif perms if needed (so leave alerts can actually fire)
+      const notifPerm = await Notifications.getPermissionsAsync();
+      const canNotify =
+        notifPerm.granted || notifPerm.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+
+      if (!canNotify) {
+
+        await Notifications.requestPermissionsAsync();
+      }
+
+      const scheduledNotifIds: string[] = [];
+
+      const { default: AsyncStorage } = await import("@react-native-async-storage/async-storage");
+
+      const timetableItems: UnifiedItem[] = await Promise.all(
+        deviceEvents.map(async (e) => {
+          const start = new Date(e.startDate);
+          const end = new Date(e.endDate);
+          const location = e.location ?? undefined;
+
+          let leaveMeta = "";
+          let routeMeta = "";
+
+          //fixed destination so travel should be Home to City campus
+          if (travelMins != null) {
+
+            const leaveAt = calcLeaveTime(start, travelMins, bufferMins);
+
+            const notifId = await scheduleLeaveSoonNotif(
+
+              e.title ?? "Lecture",leaveAt,travelMins,bufferMins
+            );
+
+            if (notifId) {
+              scheduledNotifIds.push(notifId);
+            }
+
+            leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+            routeMeta = `Route: Home to city campus (${travelMins} mins${travelSource === "fallback" ? " est." : ""})`;
+
+          } else {
+
+            routeMeta = "Route: set home Location too get leave time";
+          }
+
+          const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
+
+          const meta = [leaveMeta, routeMeta, calMeta].filter(Boolean).join(" • ") || undefined;
+
+          return {
+
+            key: `tt-${e.id}`,source: "timetable", title: e.title ?? "(no title)",start,end,location,meta,
+          };
+        })
+      );
+
+      if (scheduledNotifIds.length > 0) {
+        await AsyncStorage.setItem(leavenotif, JSON.stringify(scheduledNotifIds));
+      }
 
       setStatus("loading coursework from backend...");
       const cwRes = await fetch(`${API_BASE}/users/${USER_ID}/coursework`);
@@ -199,7 +346,10 @@ export default function CalendarScreen() {
         }));
 
       setSections(newSections);
-      setStatus(`loaded ${merged.length} items`);
+
+      const notifNote = scheduledNotifIds.length > 0 ? ` • ${scheduledNotifIds.length} leave alerts set` : "";
+      setStatus(`loaded ${merged.length} items (travel: ${travelSource})${notifNote}`);
+
     } catch (e: any) {
       setStatus("load error");
       Alert.alert("Unified calendar error", String(e?.message ?? e));
@@ -216,6 +366,22 @@ export default function CalendarScreen() {
         <Text style={{ fontSize: 20, fontWeight: "600" }}>Unified Week</Text>
         <Text>Week: {ymd(weekStart)} → {ymd(addDays(weekStart, 6))}</Text>
         <Text>Status: {status}</Text>
+
+        {travelSource === "fallback" && (
+          <Text style={{ color: "orange", fontSize: 12 }}>
+
+            Using estimated travel time(google API unavailable)
+
+          </Text>
+        )}
+
+        {travelSource === "google" && (
+          <Text style={{ color: "green", fontSize: 12 }}>
+
+            Live travel time from Google routes
+          </Text>
+        )}
+
         <Button title="Reload unified week" onPress={loadUnifiedWeek} />
       </View>
 
@@ -274,7 +440,7 @@ export default function CalendarScreen() {
 
             </Text>
             {item.location ? <Text>Location: {item.location}</Text> : null}
-            {item.meta ? <Text>{item.meta}</Text> : null}
+            {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null}
           </View>
 
         )}
