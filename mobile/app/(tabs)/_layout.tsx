@@ -16,32 +16,42 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
+      {/* Modules and cw CRUD */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Modules',
+          tabBarIcon: ({ color }) => (<IconSymbol size={28} name="house.fill" color={color} />),
         }}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+
+
+      {/* Unified weekly calendar and leave-soon alerts */}
       <Tabs.Screen
         name="calendar"
         options={{
-          title: "Calendar",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chevron.left.forwardslash.chevron.right" color={color} />,
+          title: 'Calendar',
+          tabBarIcon: ({ color }) => (<IconSymbol size={28} name="calendar" color={color} />),
         }}
       />
+
+      {/*Calendar source picker (should be uni one but can add others) */}
       <Tabs.Screen
         name="calendarSettings"
         options={{
-          title: "Cal Settings",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Calendar",
+          tabBarIcon: ({ color }) => ( <IconSymbol size={28} name="list.bullet" color={color} />),
+
+        }}
+      />
+
+      {/*user preferences home, buffer, destination */}
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color }) => (<IconSymbol size={28} name="gearshape.fill" color={color} />
+          ),
         }}
       />
     </Tabs>
