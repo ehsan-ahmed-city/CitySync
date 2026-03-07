@@ -23,6 +23,76 @@ type CourseworkDto = {
   completedAt?: string | null;
 };
 
+function calcGrade(cwItems: CourseworkDto[]) {
+  //uses only coursework with weightings
+  const withWeight = cwItems.filter((c) => c.weighting != null && c.weighting > 0);
+  if (withWeight.length === 0) return null;
+
+  const allocWeight = withWeight.reduce((sum, c) => sum + c.weighting!, 0); //allocated weight
+
+  const completedWeight = withWeight
+    .filter((c) => c.completed)
+    .reduce((sum, c) => sum + c.weighting!, 0);
+
+  const remainingWeight = allocWeight - completedWeight;
+
+  //minimum is 0 on remaining coursework
+  const predictedMin = completedWeight > 0 ? Math.round((completedWeight / 100) * 100) : 0;
+  //max is 100 on remaining coursework
+  const predictedMax = Math.min(100, completedWeight + remainingWeight);
+
+  return {
+    allocWeight, completedWeight,remainingWeight,
+    predictedMin,predictedMax,
+  };
+
+}
+
+function gradeLabel(pct: number) {
+
+  if (pct >= 70) return "First (1st)";
+  if (pct >= 60) return "2:1";
+  if (pct >= 50) return "2:2";
+  if (pct >= 40) return "Third";
+  return "Fail";
+}
+
+function gradeColour(pct: number) {
+
+  if (pct >= 70) return "#22C55E";
+  if (pct >= 60) return "#3B82F6";
+  if (pct >= 50) return "#F59E0B";
+  if (pct >= 40) return "#F97316";
+  return "#EF4444";
+
+}
+
+function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: CourseworkDto[] }) {
+  const cwForModule = coursework.filter((c) => c.moduleId === moduleId);
+  const grade = calcGrade(cwForModule);
+
+  if (!grade) {
+
+    return (
+
+      <View style={gradeStyles.container}>
+        <Text style={gradeStyles.heading}>Grade Prediction</Text>
+        <Text style={gradeStyles.hint}>
+          Add coursework with weightings to see your predicted grade.
+        </Text>
+      </View>
+
+    );
+  }
+
+  const { allocWeight, completedWeight, remainingWeight, predictedMin, predictedMax } = grade;
+
+  const progressFraction = allocWeight > 0 ? completedWeight / allocWeight : 0;
+  //^completed weighting shown as fraction of allocated weighting
+
+
+}
+
 function Pill({ label }: { label: string }){
 //using pill for stats for modules, cw, and pending
   return (
@@ -171,7 +241,7 @@ export default function HomeScreen() {
 
       }
 
-      setStatus("create module ok :), refreshing...");
+      setStatus("module created, refreshing...");
       await loadModules();//refresh list after succesful create
 
     } catch (e: any) {
@@ -187,7 +257,7 @@ export default function HomeScreen() {
   async function createCoursework() {//POST/users/{id}/modules/{moduleId}/coursework
 
     if (selectedModuleId == null) {
-      Alert.alert("No modules", "Create a module first.");
+      Alert.alert("No module selected", "Create a module first.");
       //cant create cw unless a module is selected
       return;
     }
@@ -221,7 +291,7 @@ export default function HomeScreen() {
         await scheduleCourseworkReminders(created);
       }
 
-      setStatus("create coursework ok, refreshing...");
+      setStatus("coursework created, refreshing...");
       await loadCoursework();//refresh list after successful create
 
     } catch (e: any) {
@@ -337,7 +407,7 @@ export default function HomeScreen() {
       if (!res.ok) {
 
         const txt = await res.text();
-        Alert.alert("Update falied", `${res.status}\n${txt}`);
+        Alert.alert("Update failed", `${res.status}\n${txt}`);
         return;
 
       }
@@ -377,8 +447,7 @@ export default function HomeScreen() {
   function daysUntil(yyyyMmDd: string) {
     const [y, m, d] = yyyyMmDd.split("-").map(Number);
     const due = new Date(y, m - 1, d, 23, 59, 0, 0);
-    const now = new Date();
-    const ms = due.getTime() - now.getTime();
+    const ms = due.getTime() - Date.now();
     return Math.floor(ms / (1000 * 60 * 60 * 24));
   }
 
@@ -426,16 +495,16 @@ export default function HomeScreen() {
             <View style={styles.formRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Code</Text>
-                <TextInput value={mCode} onChangeText={setMCode} style={styles.input} placeholder="e.g. IN3007" />
+                <TextInput value={mCode} onChangeText={setMCode} style={styles.input} placeholder="e.g. IN3007" placeholderTextColor="#555" />
               </View>
               <View style={{ width: 110 }}>
                 <Text style={styles.label}>Credits</Text>
-                <TextInput value={mCredits} onChangeText={setMCredits} style={styles.input} keyboardType="numeric" />
+                <TextInput value={mCredits} onChangeText={setMCredits} style={styles.input} keyboardType="numeric" placeholderTextColor="#555" />
               </View>
             </View>
 
             <Text style={styles.label}>Name</Text>
-            <TextInput value={mName} onChangeText={setMName} style={styles.input} placeholder="Module name" />
+            <TextInput value={mName} onChangeText={setMName} style={styles.input} placeholder="Module name" placeholderTextColor="#555" />
 
             <View style={styles.rowGap}>
               <PrimBtn title="Create module" onPress={createModule} />
@@ -458,6 +527,8 @@ export default function HomeScreen() {
                     <Text style={styles.itemTitle}>{item.code}</Text>
                     <Text style={styles.itemSub}>{item.name}</Text>
                     <Text style={styles.muted}>Credits: {item.credits ?? "n/a"} • ID: {item.id}</Text>
+
+                    <GradeCard moduleId={item.id} coursework={coursework} />
                   </View>
 
                   <View style={{ gap: 8 }}>
@@ -487,7 +558,7 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>Add coursework</Text>
 
             {/*changing module dropdown from id to text*/}
-            <View style={{ borderWidth: 1, borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
+            <View style={{ borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
               <Picker
                 selectedValue={selectedModuleId}
                 onValueChange={(v) => setSelectedModuleId(v)}
@@ -512,17 +583,17 @@ export default function HomeScreen() {
 
                 <Text style={styles.label}>Due date</Text>
 
-                <TextInput value={cwDueDate} onChangeText={setCwDueDate} style={styles.input} placeholder="YYYY-MM-DD" />
+                <TextInput value={cwDueDate} onChangeText={setCwDueDate} style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#555" />
               </View>
               <View style={{ width: 110 }}>
 
                 <Text style={styles.label}>Weight %</Text>
-                <TextInput value={cwWeighting} onChangeText={setCwWeighting} style={styles.input} keyboardType="numeric" />
+                <TextInput value={cwWeighting} onChangeText={setCwWeighting} style={styles.input} keyboardType="numeric" placeholderTextColor="#555" />
               </View>
             </View>
 
             <Text style={styles.label}>Title</Text>
-            <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" />
+            <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" placeholderTextColor="#555" />
 
             <View style={styles.rowGap}>
               <PrimBtn title="Create coursework" onPress={createCoursework} />
