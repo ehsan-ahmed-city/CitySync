@@ -90,7 +90,54 @@ function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: Cou
   const progressFraction = allocWeight > 0 ? completedWeight / allocWeight : 0;
   //^completed weighting shown as fraction of allocated weighting
 
+  return (
+    <View style={gradeStyles.container}>
+      <Text style={gradeStyles.heading}>Grade Prediction</Text>
 
+      <View style={gradeStyles.barTrack}>
+        <View style={[gradeStyles.barFill, { flex: progressFraction }]} />
+        <View style={{ flex: 1 - progressFraction }} />
+      </View>
+
+      <Text style={gradeStyles.barLabel}>
+        {completedWeight}% of {allocWeight}% submitted
+        {remainingWeight > 0 ? ` • ${remainingWeight}% remaining` : " all submitted"}
+      </Text>
+
+      <View style={gradeStyles.rangeRow}>
+        <View style={gradeStyles.rangeBox}>
+
+          <Text style={gradeStyles.rangeValue}>{predictedMin}%</Text>
+          <Text style={[gradeStyles.rangeLabel, { color: gradeColour(predictedMin) }]}>
+
+            {gradeLabel(predictedMin)}
+
+          </Text>
+          <Text style={gradeStyles.rangeHint}>Minimum{"\n"}(0% on rest)</Text>
+        </View>
+
+        <Text style={gradeStyles.rangeSep}>→</Text>
+
+        <View style={gradeStyles.rangeBox}>
+          <Text style={gradeStyles.rangeValue}>{predictedMax}%</Text>
+
+          <Text style={[gradeStyles.rangeLabel, { color: gradeColour(predictedMax) }]}>
+            {gradeLabel(predictedMax)}
+          </Text>
+
+          <Text style={gradeStyles.rangeHint}>Maximum{"\n"}(100% on rest)</Text>
+        </View>
+      </View>
+
+      {remainingWeight === 0 && (
+
+        <Text style={[gradeStyles.hint, { color: "#22C55E" }]}>
+
+          All coursework submitted, final grade is {predictedMax}%
+        </Text>
+      )}
+    </View>
+  );
 }
 
 function Pill({ label }: { label: string }){
@@ -702,4 +749,26 @@ const styles = StyleSheet.create({
   badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status chip (completed/pending etc)
 
 
+});
+
+const gradeStyles = StyleSheet.create({
+
+  container: {marginTop: 12,padding: 12,borderRadius: 12,backgroundColor: "#0a0a12",borderWidth: 1,
+  borderColor: "#2a2a40", gap: 8,},
+
+  heading: {color: "#d6d6df",fontWeight: "700",fontSize: 13,},
+
+  barTrack: { flexDirection: "row", height: 8, borderRadius: 99, overflow: "hidden", backgroundColor: "#1f1f30",},
+  barFill: { backgroundColor: "#3B82F6", borderRadius: 99,},
+  barLabel: { color: "#a9a9b6", fontSize: 11,},
+
+  rangeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", marginTop: 4,},
+  rangeBox: {alignItems: "center",flex: 1,},
+  rangeValue: { color: "white", fontSize: 22, fontWeight: "800",},
+  rangeLabel: {fontSize: 12, fontWeight: "700", marginTop: 2,},
+
+  rangeHint: {color: "#a9a9b6", fontSize: 10, textAlign: "center", marginTop: 2,},
+  rangeSep: {color: "#a9a9b6", fontSize: 18, paddingHorizontal: 8,},
+  hint: {color: "#a9a9b6",ontSize: 11,},
+  
 });
