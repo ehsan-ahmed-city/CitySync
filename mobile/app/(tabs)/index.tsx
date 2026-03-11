@@ -770,5 +770,5 @@ const gradeStyles = StyleSheet.create({
   rangeHint: {color: "#a9a9b6", fontSize: 10, textAlign: "center", marginTop: 2,},
   rangeSep: {color: "#a9a9b6", fontSize: 18, paddingHorizontal: 8,},
   hint: {color: "#a9a9b6",ontSize: 11,},
-  
+
 });
