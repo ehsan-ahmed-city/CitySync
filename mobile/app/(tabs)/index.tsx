@@ -4,9 +4,10 @@ import { Picker } from "@react-native-picker/picker";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
+import { getUserId, authHeaders } from "@/lib/api";
 
 const API_BASE = "http://192.168.0.10:8080";//my laptop LAN ip
-const USER_ID = 1;
+// const USER_ID = 1;
 
 //type helpers
 type ModuleDto = { id: number; userId: number; code: string; name: string; credits: number | null };
@@ -192,6 +193,7 @@ export default function HomeScreen() {
   const [coursework, setCoursework] = useState<CourseworkDto[]>([]);
 
   const [status, setStatus] = useState("idle");
+  const [userId, setUserId] = useState<number | null>(null);
 
   //module form
   const [mCode, setMCode] = useState("IN3007");
@@ -208,7 +210,12 @@ export default function HomeScreen() {
     setStatus("loading modules...");
     try {
 
-      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules`);
+      const USER_ID = await getUserId();
+      setUserId(USER_ID);
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/modules`, {
+        headers: await authHeaders(),
+      });
       const txt = await res.text(); //read as text first for dbugging
 
       if (!res.ok) {
@@ -242,7 +249,12 @@ export default function HomeScreen() {
   async function loadCoursework() { //get/users/{id}/coursework
     setStatus("loading coursework...");
     try {
-      const res = await fetch(`${API_BASE}/users/${USER_ID}/coursework`);
+      const USER_ID = await getUserId();
+      setUserId(USER_ID);
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/coursework`, {
+        headers: await authHeaders(),
+      });
       if (!res.ok) {
 
         const txt = await res.text();
@@ -268,9 +280,14 @@ export default function HomeScreen() {
     setStatus("creating module...");
     try {
 
+      const USER_ID = await getUserId();
+
       const res = await fetch(`${API_BASE}/users/${USER_ID}/modules`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          ...(await authHeaders()),
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           code: mCode,
           name: mName,
@@ -312,9 +329,14 @@ export default function HomeScreen() {
     setStatus("creating coursework...");
     try {
 
+      const USER_ID = await getUserId();
+
       const res = await fetch(`${API_BASE}/users/${USER_ID}/modules/${selectedModuleId}/coursework`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          ...(await authHeaders()),
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           title: cwTitle,
           dueDate: cwDueDate,
@@ -361,11 +383,16 @@ export default function HomeScreen() {
 
     try {
 
+      const USER_ID = await getUserId();
+
       const res = await fetch(//HTTP PUT request to backend
         `${API_BASE}/users/${USER_ID}/modules/${moduleId}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            ...(await authHeaders()),
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(patch),//convert JS object to JSON string
         }
       );
@@ -402,11 +429,14 @@ export default function HomeScreen() {
 
     try {
 
+      const USER_ID = await getUserId();
+
       //HTTP delete request
       const res = await fetch(
         `${API_BASE}/users/${USER_ID}/modules/${moduleId}`,
         {
           method: "DELETE", //
+          headers: await authHeaders(),
         }
       );
 
@@ -441,12 +471,17 @@ export default function HomeScreen() {
 
     try {
 
+      const USER_ID = await getUserId();
+
       const res = await fetch(
         `${API_BASE}/users/${USER_ID}/modules/${item.moduleId}/coursework/${item.id}`,
         {
 
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            ...(await authHeaders()),
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ completed }),
         }
       );
@@ -522,7 +557,7 @@ export default function HomeScreen() {
 
           <View style={styles.header}>
             <Text style={styles.title}>CitySync</Text>
-            <Text style={styles.subTitle}>User {USER_ID} • {status}</Text>
+            <Text style={styles.subTitle}>User {userId ?? "?"} • {status}</Text>
             <View style={styles.pillRow}>
 
               <Pill label={`Modules: ${stats.modules}`} />

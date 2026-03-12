@@ -5,9 +5,10 @@ import * as Notifications from "expo-notifications";
 
 import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
 import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
+import { getUserId, authHeaders } from "@/lib/api";
 
 const API_BASE = "http://192.168.0.10:8080";//LAN ip
-const USER_ID = 1;
+// const USER_ID = 1;
 
 const CITY_CAMPUS_DESTINATION = "City, University of London, Northampton Square, London EC1V 0HB";
 
@@ -82,7 +83,9 @@ async function fetchTravelMins(home: string) {
       `?origin=${encodeURIComponent(home.trim())}` + //encode so spaces/postcodes work in a URL
       `&destination=${encodeURIComponent(CITY_CAMPUS_DESTINATION)}`;
 
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) return null;
 
     const json = (await res.json()) as { seconds: number; fallback: boolean };
@@ -202,6 +205,8 @@ export default function CalendarScreen() {
   async function loadUnifiedWeek() {
     setStatus("requesting calendar permission...");
     try {
+      const USER_ID = await getUserId();
+
       const perm = await Calendar.requestCalendarPermissionsAsync();
       if (perm.status !== "granted") {
         Alert.alert("Calendar permission needed", "Enable calendar permission to import timetable events.");
@@ -301,7 +306,9 @@ export default function CalendarScreen() {
       }
 
       setStatus("loading coursework from backend...");
-      const cwRes = await fetch(`${API_BASE}/users/${USER_ID}/coursework`);
+      const cwRes = await fetch(`${API_BASE}/users/${USER_ID}/coursework`, {
+        headers: await authHeaders(),
+      });
       if (!cwRes.ok) {
         const txt = await cwRes.text();
         Alert.alert("Coursework load failed", `${cwRes.status}\n${txt}`);
