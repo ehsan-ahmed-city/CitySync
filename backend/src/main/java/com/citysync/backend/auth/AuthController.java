@@ -32,7 +32,7 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("message", "Code sent to " + email));
 
         } catch (Exception e) {
-
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
 
                 .body(Map.of("error", "Failed to send code: " + e.getMessage()));

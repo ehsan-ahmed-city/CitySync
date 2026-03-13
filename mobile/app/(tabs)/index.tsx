@@ -6,7 +6,7 @@ import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders}
 //^importing to index from cwreminder
 import { getUserId, authHeaders } from "@/lib/api";
 
-const API_BASE = "http://192.168.0.10:8080";//my laptop LAN ip
+const API_BASE = "http://192.168.0.12:8080";//my laptop LAN ip
 // const USER_ID = 1;
 
 //type helpers
@@ -493,7 +493,7 @@ export default function HomeScreen() {
 
           method: "PUT",
           headers: {
-          
+
             ...(await authHeaders()),
             "Content-Type": "application/json",
           },

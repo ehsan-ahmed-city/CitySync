@@ -18,6 +18,13 @@ import java.util.Collections;
  * if present and numeric, marks the request as authenticated in Spring Securit */
 public class UserIdAuthFilter extends OncePerRequestFilter {
 
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        String path = request.getServletPath();
+        return path.startsWith("/auth/") || path.equals("/health");
+    }
     @Override
     protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain)
             throws ServletException, IOException {

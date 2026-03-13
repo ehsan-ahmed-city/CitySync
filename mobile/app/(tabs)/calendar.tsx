@@ -8,7 +8,7 @@ import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
 import { getSelectedCalendarIds } from "@/lib/calendarPrefs";
 import { getUserId, authHeaders } from "@/lib/api";
 
-const API_BASE = "http://192.168.0.10:8080";//LAN ip
+const API_BASE = "http://192.168.0.12:8080";//LAN ip
 // const USER_ID = 1;
 
 const CITY_CAMPUS_DESTINATION = "City, University of London, Northampton Square, London EC1V 0HB";

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ActivityIndicator,Alert,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,
   StyleSheet,Text,TextInput,View,} from "react-native";
 
-const API_BASE = "http://192.168.0.10:8080";
+const API_BASE = "http://192.168.0.12:8080";
 
 type Props = {
 

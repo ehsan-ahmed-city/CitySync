@@ -44,7 +44,7 @@ public class AuthService {
         codeRepo.save(ac);
 
         //log console debug
-//        System.out.printf("[CitySync Auth] Code for %s → %s%n", email, code);
+        System.out.printf("[CitySync Auth] Code for %s → %s%n", email, code);
 
         //send email
         SimpleMailMessage msg = new SimpleMailMessage();
@@ -60,6 +60,7 @@ public class AuthService {
             "If you did not request this, please ignore this email.\n\n" +
             "– CitySync"
         );
+        System.out.println("[CitySync Auth] attempting to send email to: " + email);
         mailSender.send(msg);
     }
 

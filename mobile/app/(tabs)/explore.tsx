@@ -3,7 +3,7 @@ import {Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollVi
   Text, TextInput, View,} from "react-native";
 import { getUserId, authHeaders } from "@/lib/api";
 
-const API_BASE = "http://192.168.0.10:8080";
+const API_BASE = "http://192.168.0.12:8080";
 // const USER_ID = 1;
 
 const C = { bg: "#0B0B10", card: "#12121A", card2: "#161622", border: "rgba(255,255,255,0.08)",

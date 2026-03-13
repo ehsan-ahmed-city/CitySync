@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const API_BASE = "http://192.168.0.10:8080";
+export const API_BASE = "http://192.168.0.12:8080";
 
 const AUTH_KEY = "citysync.userId.v1";
 
