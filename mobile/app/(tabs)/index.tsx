@@ -206,6 +206,12 @@ export default function HomeScreen() {
   const [cwDueDate, setCwDueDate] = useState("2026-02-09");
   const [cwWeighting, setCwWeighting] = useState("30");
 
+  //cw edit state
+  const [editingCwId, setEditingCwId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editWeighting, setEditWeighting] = useState("");
+
   async function loadModules() {//GET/users/{id}/modules
     setStatus("loading modules...");
     try {
@@ -465,7 +471,74 @@ export default function HomeScreen() {
   }
 
 
-  async function setCourseworkCompleted(item: CourseworkDto, completed: boolean) {//toggle completion heper
+  async function updateCoursework(item: CourseworkDto) {//updates title, due date and weighting for coursework
+
+    const newTitle = editTitle.trim() || item.title;
+    const newDueDate = editDueDate.trim() || item.dueDate;
+    const newWeighting = editWeighting.trim() === "" ? item.weighting : Number(editWeighting.trim());
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDueDate)) {
+      Alert.alert("Invalid date", "please use YYYY-MM-DD format");
+      return;
+    }
+
+    setStatus("updating coursework...");
+    try {
+
+      const USER_ID = await getUserId();
+
+      const res = await fetch(
+        `${API_BASE}/users/${USER_ID}/modules/${item.moduleId}/coursework/${item.id}`,
+        {
+
+          method: "PUT",
+          headers: {
+          
+            ...(await authHeaders()),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+
+            title: newTitle,dueDate: newDueDate,weighting: newWeighting,
+          }),
+
+        }
+      );
+
+      if (!res.ok) {
+
+        const txt = await res.text();
+        setStatus(`update coursework failed ${res.status}`);
+        Alert.alert("Update Coursework failed", `${res.status}\n${txt}`);
+        return;
+      }
+
+      const updated = (await res.json()) as CourseworkDto;
+
+      const ok = await checkNotifPerms();
+      if (ok && !updated.completed) {
+
+        await cancelCourseworkReminders(updated.id);
+        //^cancel old reminders before rescheduling for new due date
+        await scheduleCourseworkReminders(updated);
+      }
+
+      setEditingCwId(null);
+      //^closes inline edit panel after save
+
+      setStatus(`updated coursework ${item.id}`);
+      await loadCoursework();
+
+    } catch (e: any) {
+
+      setStatus("update coursework error");
+      Alert.alert("Update Coursework error", String(e?.message ?? e));
+
+    }
+  }
+
+
+  async function setCourseworkCompleted(item: CourseworkDto, completed: boolean) {//toggle completion helper
 
     setStatus(completed ? "marking complete..." : "marking incomplete...");
 
@@ -531,6 +604,14 @@ export default function HomeScreen() {
     const due = new Date(y, m - 1, d, 23, 59, 0, 0);
     const ms = due.getTime() - Date.now();
     return Math.floor(ms / (1000 * 60 * 60 * 24));
+  }
+
+  function startEditingCw(item: CourseworkDto) {//opens edit panel and fills current coursework vals
+
+    setEditingCwId(item.id);
+    setEditTitle(item.title);
+    setEditDueDate(item.dueDate);
+    setEditWeighting(item.weighting != null ? String(item.weighting) : "");
   }
 
   const stats = useMemo(() => {
@@ -696,6 +777,7 @@ export default function HomeScreen() {
                 const dl = daysUntil(item.dueDate);
                 const lvl = getReminderLevel(dl);
 
+                const isEditing = editingCwId === item.id;
                 return (
 
                   <View style={styles.itemCard}>
@@ -720,6 +802,50 @@ export default function HomeScreen() {
                           );
                         })()
                       ) : null}
+
+                      {isEditing ? (
+
+                        <View style={styles.editPanel}>
+                          <Text style={styles.editLabel}>Title</Text>
+                          <TextInput
+
+                            value={editTitle}
+                            onChangeText={setEditTitle}
+                            style={styles.editInput}
+                            placeholderTextColor="#555"
+                          />
+
+                          <Text style={styles.editLabel}>Due date (YYYY-MM-DD)</Text>
+                          <TextInput
+
+                            value={editDueDate}
+                            onChangeText={setEditDueDate}
+                            style={styles.editInput}
+                            placeholder="YYYY-MM-DD"
+                            placeholderTextColor="#555"
+
+                          />
+
+                          <Text style={styles.editLabel}>Weight %</Text>
+                          <TextInput
+
+                            value={editWeighting}
+                            onChangeText={setEditWeighting}
+                            style={styles.editInput}
+                            keyboardType="numeric"
+                            placeholderTextColor="#555"
+
+                          />
+
+                          <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+
+                            <PrimBtn title="Save" onPress={() => updateCoursework(item)} />
+                            <SecBtn title="Cancel" onPress={() => setEditingCwId(null)} />
+
+                          </View>
+                        </View>
+
+                      ) : null}
                     </View>
 
                     <View style={{ gap: 8 }}>
@@ -727,6 +853,14 @@ export default function HomeScreen() {
                         title={item.completed ? "Mark Incomplete" : "Mark Complete"}
                         onPress={() => setCourseworkCompleted(item, !item.completed)}
                       />
+
+                      {!isEditing ? (
+
+                        <SecBtn
+                          title="Edit"
+                          onPress={() => startEditingCw(item)}
+                        />
+                      ) : null}
                     </View>
                   </View>
                 );
@@ -783,6 +917,10 @@ const styles = StyleSheet.create({
 
   badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status chip (completed/pending etc)
 
+  editPanel: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#12121c", borderWidth: 1, borderColor: "#2a2a40", gap: 6 }, // inline edit box
+  editLabel: { color: "#a9a9b6", fontSize: 12, fontWeight: "600" },//edit label
+  editInput: { backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 10, padding: 10, color: "white", fontSize: 14 }, // inline edit input
+
 
 });
 
@@ -804,6 +942,6 @@ const gradeStyles = StyleSheet.create({
 
   rangeHint: {color: "#a9a9b6", fontSize: 10, textAlign: "center", marginTop: 2,},
   rangeSep: {color: "#a9a9b6", fontSize: 18, paddingHorizontal: 8,},
-  hint: {color: "#a9a9b6",ontSize: 11,},
+  hint: {color: "#a9a9b6", fontSize: 11,},
 
 });
