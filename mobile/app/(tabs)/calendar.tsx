@@ -5,6 +5,7 @@ import * as Notifications from "expo-notifications";
 
 import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
 import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
+import { getSelectedCalendarIds } from "@/lib/calendarPrefs";
 import { getUserId, authHeaders } from "@/lib/api";
 
 const API_BASE = "http://192.168.0.10:8080";//LAN ip
@@ -218,7 +219,35 @@ export default function CalendarScreen() {
       const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
       //read from all visible calendars
-      const calIds = calendars.map((c) => c.id);
+      // const calIds = calendars.map((c) => c.id);
+
+      //read saved calendar selection first, else fall back to all calendars
+      const savedIds = await getSelectedCalendarIds();
+      let calIds: string[];
+
+      if (savedIds && savedIds.length > 0) {
+
+        const existingIds = new Set(calendars.map((c) => c.id));
+        calIds = savedIds.filter((id) => existingIds.has(id));
+        //^keeps only saved calendars that still exist on the device
+
+        if (calIds.length === 0) {
+
+          calIds = calendars.map((c) => c.id);
+          setStatus("saved calendars unavailable, using all calendars...");
+          //^fallback if previously saved calendars were removed from device
+
+        } else {
+
+          setStatus(`using ${calIds.length} selected calendar(s)...`);
+        }
+
+      } else {
+
+        calIds = calendars.map((c) => c.id);
+        setStatus("no calendars selected — using all. Pick calendars in the Cal. Source tab.");
+        //^uses all calendars until user makes a selection in the calendar source tab
+      }
 
       //fetch all events within the week range
       const deviceEvents = await Calendar.getEventsAsync(calIds, weekStart, weekEnd);
@@ -229,15 +258,18 @@ export default function CalendarScreen() {
       setStatus("fetching travel time...");
 
       let travelMins = await fetchTravelMins(homeLocation);
+      let nextTravelSource: "google" | "fallback" | "none";
 
       if (travelMins != null) {
 
+        nextTravelSource = "google";
         setTravelSource("google");
 
       } else {
 
         travelMins = estimateTravelMinsHomeToCampusFallback(homeLocation);
-        setTravelSource(travelMins != null ? "fallback" : "none");
+        nextTravelSource = travelMins != null ? "fallback" : "none";
+        setTravelSource(nextTravelSource);
 
       }
 
@@ -283,14 +315,18 @@ export default function CalendarScreen() {
 
             leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
-            routeMeta = `Route: Home to city campus (${travelMins} mins${travelSource === "fallback" ? " est." : ""})`;
+            // routeMeta = `Route: Home to city campus (${travelMins} mins${travelSource === "fallback" ? " est." : ""})`;
+            routeMeta = `Route: Home → City campus (${travelMins} mins${nextTravelSource === "fallback" ? " est." : ""})`;
 
           } else {
 
-            routeMeta = "Route: set home Location too get leave time";
+            routeMeta = "Set home address in settings to get leave time";
           }
 
-          const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
+          // const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
+          const calName = calendars.find((c) => c.id === e.calendarId)?.title ?? e.calendarId;
+          const calMeta = calName ? `Calendar ${calName}` : "";
+          //^shows which selected calendar the event came from
 
           const meta = [leaveMeta, routeMeta, calMeta].filter(Boolean).join(" • ") || undefined;
 
@@ -355,7 +391,8 @@ export default function CalendarScreen() {
       setSections(newSections);
 
       const notifNote = scheduledNotifIds.length > 0 ? ` • ${scheduledNotifIds.length} leave alerts set` : "";
-      setStatus(`loaded ${merged.length} items (travel: ${travelSource})${notifNote}`);
+      // setStatus(`loaded ${merged.length} items (travel: ${travelSource})${notifNote}`);
+      setStatus(`loaded ${merged.length} items (travel: ${nextTravelSource})${notifNote}`);
 
     } catch (e: any) {
       setStatus("load error");
@@ -411,7 +448,7 @@ export default function CalendarScreen() {
 
           value={homeLocation}
           onChangeText={saveHomeLocation}
-          placeholder="e.g. LU48AY :D or full address"
+          placeholder="e.g. LU48AY or full address"
           autoCapitalize="none"
           style={{ borderWidth: 1, padding: 10 }}
 
