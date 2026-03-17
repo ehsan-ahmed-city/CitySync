@@ -316,7 +316,7 @@ export default function CalendarScreen() {
             leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
             // routeMeta = `Route: Home to city campus (${travelMins} mins${travelSource === "fallback" ? " est." : ""})`;
-            routeMeta = `Route: Home → City campus (${travelMins} mins${nextTravelSource === "fallback" ? " est." : ""})`;
+            routeMeta = `Route: Home -> City campus (${travelMins} mins${nextTravelSource === "fallback" ? " est." : ""})`;
 
           } else {
 
@@ -408,20 +408,17 @@ export default function CalendarScreen() {
     <SafeAreaView style={{ flex: 1 }}>
       <View style={{ padding: 16, gap: 8 }}>
         <Text style={{ fontSize: 20, fontWeight: "600" }}>Unified Week</Text>
-        <Text>Week: {ymd(weekStart)} → {ymd(addDays(weekStart, 6))}</Text>
+        <Text>Week: {ymd(weekStart)} to {ymd(addDays(weekStart, 6))}</Text>
         <Text>Status: {status}</Text>
 
         {travelSource === "fallback" && (
           <Text style={{ color: "orange", fontSize: 12 }}>
-
             Using estimated travel time(google API unavailable)
-
           </Text>
         )}
 
         {travelSource === "google" && (
           <Text style={{ color: "green", fontSize: 12 }}>
-
             Live travel time from Google routes
           </Text>
         )}
@@ -454,9 +451,7 @@ export default function CalendarScreen() {
 
         />
         <Text style={{ opacity: 0.7 }}>
-
           Destination: City Uni of London campus
-
         </Text>
 
       </View>
@@ -465,10 +460,8 @@ export default function CalendarScreen() {
         sections={sections}
         keyExtractor={(item) => item.key}
         renderSectionHeader={({ section }) => (
-
           <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#eee" }}>
             <Text style={{ fontWeight: "700" }}>{section.title}</Text>
-
           </View>
         )}
         renderItem={({ item }) => (
@@ -478,10 +471,8 @@ export default function CalendarScreen() {
               [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
             </Text>
             <Text>
-
-              {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} →{" "}
+              {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
               {item.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-
             </Text>
             {item.location ? <Text>Location: {item.location}</Text> : null}
             {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null}

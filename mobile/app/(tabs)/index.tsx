@@ -117,7 +117,7 @@ function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: Cou
           <Text style={gradeStyles.rangeHint}>Minimum{"\n"}(0% on rest)</Text>
         </View>
 
-        <Text style={gradeStyles.rangeSep}>→</Text>
+        <Text style={gradeStyles.rangeSep}>to</Text>
 
         <View style={gradeStyles.rangeBox}>
           <Text style={gradeStyles.rangeValue}>{predictedMax}%</Text>

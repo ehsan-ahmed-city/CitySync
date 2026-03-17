@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, Switch, Text, View } from "react-native";
 import * as Calendar from "expo-calendar";
-import { getSelectedCalendarIds, setSelectedCalendarIds, clearSelectedCalendarIds } from "@/lib/calendarPrefs";
+import { getSelectedCalendarIds, setSelectedCalendarIds, clearSelectedCalendarIds,} from "@/lib/calendarPrefs";
 
 type CalRow = {
   id: string;
@@ -12,7 +12,7 @@ type CalRow = {
 };
 
 const colours = {bg: "#0B0B10",card: "#12121A",card2: "#161622",border: "rgba(255,255,255,0.08)",text: "#FFFFFF",
-  sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#3B82F6",danger: "#EF4444",};
+  sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#3B82F6",};
 
 function Pill({ label }: { label: string }) {
   return (
@@ -23,7 +23,9 @@ function Pill({ label }: { label: string }) {
         //^radius large for round look
       }}
     >
-      <Text style={{ color: colours.sub, fontWeight: "600", fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: colours.sub, fontWeight: "600", fontSize: 12 }}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -108,7 +110,7 @@ export default function CalendarSettingsScreen() {
 
     const saved = await getSelectedCalendarIds();
     const nextSel: Record<string, boolean> = {};
-    for (const r of rows) nextSel[r.id] = saved ? saved.includes(r.id) : false;
+    for (const r of rows) {nextSel[r.id] = saved ? saved.includes(r.id) : false;}
 
     setCals(rows);
     setSelected(nextSel);
@@ -125,7 +127,7 @@ export default function CalendarSettingsScreen() {
       .map(([k]) => k);
 
     if (ids.length === 0) {
-      Alert.alert("Select at least one", "Pick your timetable calendar so CitySync knows waht to include.");
+      Alert.alert("Select at least one","Pick your timetable calendar so CitySync knows what to include.");
       return;
     }
 
@@ -141,7 +143,8 @@ export default function CalendarSettingsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colours.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>        {/*header card */}
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      {/*header card */}
         <View
           style={{
 
@@ -171,11 +174,16 @@ export default function CalendarSettingsScreen() {
           <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
             <View style={{ flex: 1 }}>
 
-              <PrimaryButton title="Save selection" onPress={() => save().catch((e) => Alert.alert("Save error", String(e)))} />
+              <PrimaryButton title="Save selection" onPress={() => {save().catch((e) => Alert.alert("Save error", String(e)));}}/>
             </View>
             <View style={{ flex: 1 }}>
 
-              <SecondaryButton title="Reset" onPress={() => reset().catch((e) => Alert.alert("Reset error", String(e)))} />
+              <SecondaryButton
+                title="Reset"
+                onPress={() => {
+                  reset().catch((e) => Alert.alert("Reset error", String(e)));
+                }}
+              />
             </View>
           </View>
         </View>
@@ -197,9 +205,8 @@ export default function CalendarSettingsScreen() {
 
             <Text style={{ color: colours.sub, marginTop: 2 }}>
 
-
-              {c.source ? `Source: ${c.source}` : "Source: n/a"}{" "}
-              {c.type ? `• Type: ${c.type}` : ""}
+              {c.source ? `Source: ${c.source}` : "Source: n/a"}
+              {c.type ? ` • Type: ${c.type}` : ""}
               {/*^show souce and calendar type if available, otherwise fallback */}
             </Text>
 

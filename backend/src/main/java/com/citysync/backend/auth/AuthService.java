@@ -44,7 +44,7 @@ public class AuthService {
         codeRepo.save(ac);
 
         //log console debug
-        System.out.printf("[CitySync Auth] Code for %s → %s%n", email, code);
+        System.out.printf("[CitySync Auth] Code for %s to %s%n", email, code);
 
         //send email
         SimpleMailMessage msg = new SimpleMailMessage();

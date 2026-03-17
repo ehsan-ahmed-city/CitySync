@@ -46,7 +46,6 @@ function SectionCard({ title, children }: { title: string; children: React.React
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{title}</Text>
-
       {children}
     </View>
   );
@@ -202,9 +201,7 @@ export default function SettingsScreen() {
 
             />
             <Text style={styles.hint}>
-
               Used to calculate your travel time to City University A postcode also works.
-
             </Text>
 
             <FieldLabel label="Destination (pre-filled)" />
@@ -219,9 +216,7 @@ export default function SettingsScreen() {
               style={styles.input}
             />
             <Text style={styles.hint}>
-
               Change this if your lectures are at different location.
-
             </Text>
           </SectionCard>
 
@@ -230,7 +225,6 @@ export default function SettingsScreen() {
 
             <Text style={styles.sub}>
               Extra minutes added on top of travel time before your lecture starts.
-
             </Text>
 
             <View style={styles.bufferRow}>
@@ -268,16 +262,15 @@ export default function SettingsScreen() {
           {/*talks how leave-soon works */}
           <SectionCard title="How leave soon alerts work">
             <Text style={styles.sub}>
-              CitySync calculates your leave time as:{"\n\n"}
-              <Text style={{ color: C.primary, fontWeight: "700" }}>
-                Lecture start − (travel time + your buffer)
-              </Text>
+              {"CitySync calculates your leave time as:\n\n"}
+            </Text>
 
-              {"\n\n"}
-              A push notification goes at exactly that time, even if the app is closed.
-              Travel time is fetched live from Google Routes API. If that fials then CitySync
-              uses a static estimate based on your postcode.
+            <Text style={{ color: C.primary, fontWeight: "700", fontSize: 13 }}>
+              {"Lecture start − (travel time + your buffer)"}
+            </Text>
 
+            <Text style={styles.sub}>
+              {"\nA push notification fires at exactly that time, even if the app is closed. Travel time is fetched live from Google Routes API. If unavailable, CitySync uses a static estimate based on your postcode."}
             </Text>
           </SectionCard>
 

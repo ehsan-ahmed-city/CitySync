@@ -21,7 +21,7 @@ export function useAuth() {
 
       if (val) {
 
-        setAuth({ status: "authenticaetd", userId: Number(val) });
+        setAuth({ status: "authenticated", userId: Number(val) });
       } else {
         setAuth({ status: "unauthenticated" });
       }
