@@ -405,11 +405,12 @@ export default function CalendarScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    // <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#0b0b0f" }}>
       <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 20, fontWeight: "600" }}>Unified Week</Text>
-        <Text>Week: {ymd(weekStart)} to {ymd(addDays(weekStart, 6))}</Text>
-        <Text>Status: {status}</Text>
+        <Text style={{ fontSize: 20, fontWeight: "600", color: "white" }}>Unified Week</Text>
+        <Text style={{ color: "#d6d6df" }}>Week: {ymd(weekStart)} to {ymd(addDays(weekStart, 6))}</Text>
+        <Text style={{ color: "#d6d6df" }}>Status: {status}</Text>
 
         {travelSource === "fallback" && (
           <Text style={{ color: "orange", fontSize: 12 }}>
@@ -427,8 +428,8 @@ export default function CalendarScreen() {
       </View>
 
       <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 16, fontWeight: "700" }}>Leave buffer</Text>
-        <Text>Current: {buffer} minutes</Text>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "white" }}>Leave buffer</Text>
+        <Text style={{ color: "#d6d6df" }}>Current: {buffer} minutes</Text>
         <View style={{ flexDirection: "row", gap: 10 }}>
 
           <Button title="-5" onPress={() => saveBuffer(Math.max(0, buffer - 5))} />
@@ -440,17 +441,18 @@ export default function CalendarScreen() {
 
       <View style={{ padding: 16, gap: 8 }}>
 
-        <Text style={{ fontSize: 16, fontWeight: "700" }}>Home location</Text>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "white" }}>Home location</Text>
         <TextInput
 
           value={homeLocation}
           onChangeText={saveHomeLocation}
           placeholder="e.g. LU48AY or full address"
+          placeholderTextColor="#777"
           autoCapitalize="none"
-          style={{ borderWidth: 1, padding: 10 }}
+          style={{ borderWidth: 1, padding: 10, color: "white", borderColor: "#2a2a3a", backgroundColor: "#14141a" }}
 
         />
-        <Text style={{ opacity: 0.7 }}>
+        <Text style={{ opacity: 0.7, color: "#a9a9b6" }}>
           Destination: City Uni of London campus
         </Text>
 
@@ -460,26 +462,48 @@ export default function CalendarScreen() {
         sections={sections}
         keyExtractor={(item) => item.key}
         renderSectionHeader={({ section }) => (
-          <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#eee" }}>
-            <Text style={{ fontWeight: "700" }}>{section.title}</Text>
+          // <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#eee" }}>
+          <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#14141a" }}>
+            {/* <Text style={{ fontWeight: "700" }}>{section.title}</Text> */}
+            <Text style={{ fontWeight: "700", color: "white" }}>{section.title}</Text>
           </View>
         )}
         renderItem={({ item }) => (
 
-          <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 }}>
-            <Text style={{ fontWeight: "600" }}>
+          // <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 }}>
+          <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, backgroundColor: "#0b0b0f", borderBottomColor: "#262638" }}>
+            {/* <Text style={{ fontWeight: "600" }}> */}
+            <Text style={{ fontWeight: "600", color: "white" }}>
               [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
             </Text>
-            <Text>
+            {/* <Text> */}
+            <Text style={{ color: "#d6d6df" }}>
               {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
               {item.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </Text>
-            {item.location ? <Text>Location: {item.location}</Text> : null}
-            {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null}
+            {/* {item.location ? <Text>Location: {item.location}</Text> : null} */}
+            {item.location ? <Text style={{ color: "#a9a9b6" }}>Location: {item.location}</Text> : null}
+            {/* {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null} */}
+            {item.meta ? (
+              <>
+                {item.meta.split(" • ").map((part, i) => (
+                  <Text
+                    key={i}
+                    style={{
+                      fontSize: 12,
+                      color: part.startsWith("Leave at") ? "#22C55E" : "#a9a9b6",
+                      marginTop: i === 0 ? 4 : 1,
+                    }}
+                  >
+                    {part}
+                  </Text>
+                ))}
+              </>
+            ) : null}
           </View>
 
         )}
-        ListEmptyComponent={<Text style={{ padding: 16 }}>No items this week.</Text>}
+        ListEmptyComponent={<Text style={{ padding: 16, color: "#d6d6df" }}>No items this week.</Text>}
       />
     </SafeAreaView>
   );

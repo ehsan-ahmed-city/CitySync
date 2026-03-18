@@ -45,8 +45,7 @@ public class TravelService {
                     )
                 )),
 
-                "travelMode", "TRANSIT",
-                "routingPreference", "LESS_WALKING"
+                "travelMode", "TRANSIT"
             );
 
             //to computeRouteMatrix
