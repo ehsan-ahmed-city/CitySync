@@ -150,9 +150,46 @@ async function scheduleLeaveSoonNotif(
   bufferMins: number
 ) {
   //dont schedule if time already passed (or is basically now)
-  if (leaveAt.getTime() <= Date.now() + 5_000) return null;
+  if (leaveAt.getTime() <= Date.now()) {
+    console.log(
+      `[CitySync] skipped leave notif for "${eventTitle}", leave time already passed`
+    );
+    return null;
+  }
 
   try {
+
+    // const perms = await Notifications.getPermissionsAsync();
+    // let granted =
+    //   perms.granted ||
+    //   perms.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+    //
+    // if (!granted) {
+    //   const req = await Notifications.requestPermissionsAsync();
+    //   granted =
+    //     req.granted ||
+    //     req.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+    // }
+    //
+    // if (!granted) {
+    //   console.log(`[CitySync] Notifications not permitted for "${eventTitle}"`);
+    //   return null;
+    // }
+
+    let perms = await Notifications.getPermissionsAsync();
+
+    if (!perms.granted) {
+      perms = await Notifications.requestPermissionsAsync();
+    }
+
+    if (!perms.granted) {
+      console.log("[CitySync] notifications NOT granted");
+      return null;
+    }
+
+    console.log(
+      `[CitySync] Scheduling leave notif for "${eventTitle}" at ${leaveAt.toISOString()}, now is ${new Date().toISOString()}`
+    );
 
     const id = await Notifications.scheduleNotificationAsync({
 
@@ -162,13 +199,18 @@ async function scheduleLeaveSoonNotif(
         body: `Leave now for "${eventTitle}" — ${travelMins} min journey + ${bufferMins} min buffer`,
         data: { type: "leave_soon", eventTitle },
       },
-      trigger: leaveAt, //activates at leaveAt Date
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: leaveAt, //activates at leaveAt Date
+      },
     });
 
+    console.log(`[CitySync] Scheduled notif id: ${id}`);
     return id;
 
-  } catch {
+  } catch (e) {
 
+    console.log(`[CitySync] Failed to schedule notif for "${eventTitle}":`, e);
     return null;
   }
 }
@@ -277,13 +319,24 @@ export default function CalendarScreen() {
       await cancelAllLeaveSoonNotifs();
 
       //ask notif perms if needed (so leave alerts can actually fire)
-      const notifPerm = await Notifications.getPermissionsAsync();
-      const canNotify =
-        notifPerm.granted || notifPerm.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+      // const notifPerm = await Notifications.getPermissionsAsync();
+      // const canNotify =
+      //   notifPerm.granted || notifPerm.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+      //
+      // if (!canNotify) {
+      //
+      //   await Notifications.requestPermissionsAsync();
+      // }
 
-      if (!canNotify) {
+      let perms = await Notifications.getPermissionsAsync();
 
-        await Notifications.requestPermissionsAsync();
+      if (!perms.granted) {
+        perms = await Notifications.requestPermissionsAsync();
+      }
+
+      if (!perms.granted) {
+        console.log("[CitySync] notifications not granted");
+        return;
       }
 
       const scheduledNotifIds: string[] = [];
@@ -340,6 +393,23 @@ export default function CalendarScreen() {
       if (scheduledNotifIds.length > 0) {
         await AsyncStorage.setItem(leavenotif, JSON.stringify(scheduledNotifIds));
       }
+
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+
+//       Alert.alert(
+//         "Scheduled notifications",
+//         JSON.stringify(
+//           scheduled.map((n) => ({id: n.identifier, title: n.content.title,
+//             body: n.content.body,trigger: n.trigger,
+//           })),
+//           null,2
+//         ).slice(0, 1500)
+//       );
+
+      // const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      // console.log("[CitySync] scheduled notifications:", JSON.stringify(scheduled, null, 2));
+
+      console.log("[CitySync] All scheduled:", JSON.stringify(scheduled, null, 2));
 
       setStatus("loading coursework from backend...");
       const cwRes = await fetch(`${API_BASE}/users/${USER_ID}/coursework`, {
@@ -425,6 +495,24 @@ export default function CalendarScreen() {
         )}
 
         <Button title="Reload unified week" onPress={loadUnifiedWeek} />
+
+        {/*
+        <Button
+          title="Test Notification (5s)"
+          onPress={async () => {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: "TEST",
+                body: "should fire in 5 secs",
+              },
+              trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+                seconds: 5,
+              },
+            });
+          }}
+        />
+        */}
       </View>
 
       <View style={{ padding: 16, gap: 8 }}>
@@ -468,41 +556,57 @@ export default function CalendarScreen() {
             <Text style={{ fontWeight: "700", color: "white" }}>{section.title}</Text>
           </View>
         )}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
 
-          // <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 }}>
-          <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, backgroundColor: "#0b0b0f", borderBottomColor: "#262638" }}>
-            {/* <Text style={{ fontWeight: "600" }}> */}
-            <Text style={{ fontWeight: "600", color: "white" }}>
-              [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
-            </Text>
-            {/* <Text> */}
-            <Text style={{ color: "#d6d6df" }}>
-              {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
-              {item.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </Text>
-            {/* {item.location ? <Text>Location: {item.location}</Text> : null} */}
-            {item.location ? <Text style={{ color: "#a9a9b6" }}>Location: {item.location}</Text> : null}
-            {/* {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null} */}
-            {item.meta ? (
-              <>
-                {item.meta.split(" • ").map((part, i) => (
-                  <Text
-                    key={i}
-                    style={{
-                      fontSize: 12,
-                      color: part.startsWith("Leave at") ? "#22C55E" : "#a9a9b6",
-                      marginTop: i === 0 ? 4 : 1,
-                    }}
-                  >
-                    {part}
-                  </Text>
-                ))}
-              </>
-            ) : null}
-          </View>
+          const past = item.end.getTime() < Date.now();
+          //^dims events that have already finished
 
-        )}
+          return (
+
+            // <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 }}>
+            <View
+              style={{paddingHorizontal: 16,paddingVertical: 10,borderBottomWidth: 1,backgroundColor: past ? "#101015" : "#0b0b0f",
+                borderBottomColor: "#262638",opacity: past ? 0.45 : 1,
+              }}
+            >
+              {/* <Text style={{ fontWeight: "600" }}> */}
+              <Text style={{ fontWeight: "600", color: past ? "#7f7f8f" : "white" }}>
+                [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
+              </Text>
+
+              {/* <Text> */}
+              <Text style={{ color: past ? "#7f7f8f" : "#d6d6df" }}>
+                {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
+                {item.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </Text>
+
+              {/* {item.location ? <Text>Location: {item.location}</Text> : null} */}
+              {item.location ? (
+                <Text style={{ color: past ? "#6d6d7c" : "#a9a9b6" }}>
+                  Location: {item.location}
+                </Text>
+              ) : null}
+
+              {/* {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null} */}
+              {item.meta ? (
+                <>
+                  {item.meta.split(" • ").map((part, i) => (
+                    <Text
+                      key={i}
+                      style={{fontSize: 12,color: past
+                          ? "#6d6d7c" : part.startsWith("Leave at") ? "#22C55E" : "#a9a9b6",
+                        marginTop: i === 0 ? 4 : 1,
+                      }}
+                    >
+                      {part}
+                    </Text>
+                  ))}
+                </>
+              ) : null}
+            </View>
+
+          );
+        }}
         ListEmptyComponent={<Text style={{ padding: 16, color: "#d6d6df" }}>No items this week.</Text>}
       />
     </SafeAreaView>
