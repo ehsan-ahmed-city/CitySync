@@ -113,6 +113,10 @@ public class CwController {
             cw.setWeighting(req.weighting());
         }
 
+        if (req.scorePercent()!= null){
+            cw.setScorePercent(req.scorePercent());
+        }
+
         if (req.completed() != null) {
             cw.setCompleted(req.completed());//completion toggle
         }
@@ -156,7 +160,7 @@ public class CwController {
 //request body JSON for create coursework
 record CreateCourseworkReq(String title, LocalDate dueDate, Integer weighting) {}
 
-record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting, Boolean completed) {}
+record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting, Boolean completed, java.math.BigDecimal scorePercent) {}
 
 /**
  * response DTO returned to the client
@@ -169,7 +173,8 @@ record CourseworkResponse(
         LocalDate dueDate,
         Integer weighting,
         Boolean completed,
-        Instant completedAt
+        Instant completedAt,
+        java.math.BigDecimal scorePercent
 ) {
     static CourseworkResponse from(Coursework c) {
         return new CourseworkResponse(
@@ -180,7 +185,8 @@ record CourseworkResponse(
                 c.getDueDate(),
                 c.getWeighting(),
                 c.isCompleted(),
-                c.getCompletedAt()
+                c.getCompletedAt(),
+                c.getScorePercent()
         );
     }
 }

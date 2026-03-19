@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,View,} from "react-native";
+import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,Button, View,} from "react-native";
 import { Picker } from "@react-native-picker/picker";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
@@ -22,6 +22,7 @@ type CourseworkDto = {
   //completion fields
   completed?: boolean;
   completedAt?: string | null;
+  scorePercent?: number | null;
 };
 
 function calcGrade(cwItems: CourseworkDto[]) {
@@ -31,6 +32,7 @@ function calcGrade(cwItems: CourseworkDto[]) {
 
   const allocWeight = withWeight.reduce((sum, c) => sum + c.weighting!, 0); //allocated weight
 
+  const confirmedMark = withWeight .filter((c) => c.scorePercent != null) .reduce((sum,c)=> sum + (c.weighting! * c.scorePercent! / 100), 0);
   const completedWeight = withWeight
     .filter((c) => c.completed)
     .reduce((sum, c) => sum + c.weighting!, 0);
@@ -38,13 +40,13 @@ function calcGrade(cwItems: CourseworkDto[]) {
   const remainingWeight = allocWeight - completedWeight;
 
   //minimum is 0 on remaining coursework
-  const predictedMin = completedWeight > 0 ? Math.round((completedWeight / 100) * 100) : 0;
+  const predictedMin = Math.round(confirmedMark);
   //max is 100 on remaining coursework
-  const predictedMax = Math.min(100, completedWeight + remainingWeight);
+  const predictedMax = Math.min(100, Math.round(confirmedMark) + remainingWeight);
 
   return {
-    allocWeight, completedWeight,remainingWeight,
-    predictedMin,predictedMax,
+    allocWeight, confirmedMark ,completedWeight,
+    remainingWeight, predictedMin,predictedMax,
   };
 
 }
@@ -86,7 +88,7 @@ function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: Cou
     );
   }
 
-  const { allocWeight, completedWeight, remainingWeight, predictedMin, predictedMax } = grade;
+  const { allocWeight, confirmedMark ,completedWeight, remainingWeight, predictedMin, predictedMax } = grade;
 
   const progressFraction = allocWeight > 0 ? completedWeight / allocWeight : 0;
   //^completed weighting shown as fraction of allocated weighting
@@ -134,7 +136,7 @@ function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: Cou
 
         <Text style={[gradeStyles.hint, { color: "#22C55E" }]}>
 
-          All coursework submitted, final grade is {predictedMax}%
+          All coursework submitted, final grade is {Math.round(confirmedMark)}%
         </Text>
       )}
     </View>
@@ -205,6 +207,7 @@ export default function HomeScreen() {
   const [cwTitle, setCwTitle] = useState("PDD submission");
   const [cwDueDate, setCwDueDate] = useState("2026-02-09");
   const [cwWeighting, setCwWeighting] = useState("30");
+  const [editScorePercent, setEditScorePercent] = useState("");
 
   //cw edit state
   const [editingCwId, setEditingCwId] = useState<number | null>(null);
@@ -500,6 +503,7 @@ export default function HomeScreen() {
           body: JSON.stringify({
 
             title: newTitle,dueDate: newDueDate,weighting: newWeighting,
+            scorePercent: editScorePercent.trim() === "" ? null : Number(editScorePercent.trim()),
           }),
 
         }
@@ -612,6 +616,7 @@ export default function HomeScreen() {
     setEditTitle(item.title);
     setEditDueDate(item.dueDate);
     setEditWeighting(item.weighting != null ? String(item.weighting) : "");
+    setEditScorePercent(item.scorePercent != null ? String(item.scorePercent) : "");
   }
 
   const stats = useMemo(() => {
@@ -695,7 +700,28 @@ export default function HomeScreen() {
                   </View>
 
                   <View style={{ gap: 8 }}>
-                    <SecBtn title="Rename" onPress={() => updateModule(item.id, { name: "Updated" })} />
+                    <Button title="Rename" onPress={() =>
+                        Alert.prompt(
+                          "Rename module",
+                          "Enter a new module name",
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Save",
+                              onPress: (value) => {
+
+                                const nextName = value?.trim();
+                                if (!nextName) return;
+                                updateModule(item.id, { name: nextName });
+                              },
+
+                            },
+                          ],
+                          "plain-text",
+                          item.name
+                        )
+                      }
+                    />
                     <DangerBtn
                       title="Delete"
                       onPress={() =>
@@ -785,6 +811,7 @@ export default function HomeScreen() {
                       <Text style={styles.itemTitle}>{item.title}</Text>
                       <Text style={styles.muted}>
                         Due: {item.dueDate} • Module: {item.moduleId} • Weight: {item.weighting ?? "n/a"}%
+                        {item.scorePercent != null ? `•Mark: ${item.scorePercent}%` : ""}
                       </Text>
 
                       <Text style={styles.badge}>
@@ -835,6 +862,16 @@ export default function HomeScreen() {
                             keyboardType="numeric"
                             placeholderTextColor="#555"
 
+                          />
+
+                          <Text style = {styles.editLabel}>Score %</Text>
+                          <TextInput
+                            value={editScorePercent}
+                            onChangeText={setEditScorePercent}
+                            style={styles.editInput}
+                            keyboardType="numeric"
+                            placeholder= "e.g 65"
+                            placeholderTextColor= "#555"
                           />
 
                           <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>

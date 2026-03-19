@@ -35,6 +35,9 @@ public class Coursework {
     @Column(nullable = false)
     private boolean completed = false;
 
+    @Column(name = "score_percent")
+    private java.math.BigDecimal scorePercent;
+
     private Instant completedAt;
 
     protected Coursework() {
@@ -59,6 +62,8 @@ public class Coursework {
     public boolean isCompleted() { return completed; }
     public Instant getCompletedAt() { return completedAt; }
 
+    public java.math.BigDecimal getScorePercent(){ return scorePercent;}
+
     //setters
     public void setTitle(String title) {
         this.title = title;
@@ -77,4 +82,7 @@ public class Coursework {
         this.completedAt = completed ? Instant.now() : null;
     }
 
+    public void setScorePercent(java.math.BigDecimal scorePercent) {
+        this.scorePercent = scorePercent;
+    }
 }

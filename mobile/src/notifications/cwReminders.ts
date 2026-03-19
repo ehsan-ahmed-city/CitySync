@@ -151,7 +151,7 @@ export async function scheduleCourseworkReminders(//schedule reminder notificati
 
       },
 
-      trigger: t.when,
+      trigger:{type:"date" as const, date : t.when,},
     });
 
     scheduledIds.push(id);
