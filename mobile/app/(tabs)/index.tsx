@@ -37,17 +37,23 @@ function calcGrade(cwItems: CourseworkDto[]) {
     .filter((c) => c.completed)
     .reduce((sum, c) => sum + c.weighting!, 0);
 
-  const remainingWeight = allocWeight - completedWeight;
+  const remainingWeight = Math.max(0,allocWeight - completedWeight);
 
   //minimum is 0 on remaining coursework
   const predictedMin = Math.round(confirmedMark);
   //max is 100 on remaining coursework
-  const predictedMax = Math.min(100, Math.round(confirmedMark) + remainingWeight);
+  const predictedMax = Math.min(100, Math.round(confirmedMark + remainingWeight));
 
   return {
     allocWeight, confirmedMark ,completedWeight,
     remainingWeight, predictedMin,predictedMax,
   };
+
+}
+
+function getModuleWeightTotal(moduleId: number, coursework: CourseworkDto[], excludeCourseworkId?: number){
+    return coursework.filter(c => c.moduleId === moduleId).filter(c => excludeCourseworkId == null || c.id !== excludeCourseworkId)
+    .reduce((sum, c) => sum + (c.weighting ?? 0), 0);
 
 }
 
@@ -89,6 +95,7 @@ function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: Cou
   }
 
   const { allocWeight, confirmedMark ,completedWeight, remainingWeight, predictedMin, predictedMax } = grade;
+  //^calculated vals for display
 
   const progressFraction = allocWeight > 0 ? completedWeight / allocWeight : 0;
   //^completed weighting shown as fraction of allocated weighting
@@ -131,6 +138,12 @@ function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: Cou
           <Text style={gradeStyles.rangeHint}>Maximum{"\n"}(100% on rest)</Text>
         </View>
       </View>
+
+      {allocWeight > 100 &&( //if saved weighting > 100
+        <Text style = {[gradeStyles.hint, {color: "#EF4444"}]}>
+            Invalid module input: coursework weighting exceeds 100%
+        </Text>
+      )}
 
       {remainingWeight === 0 && (
 
@@ -335,6 +348,24 @@ export default function HomeScreen() {
       return;
     }
 
+    const newWeight= cwWeighting.trim() === "" ? null : Number(cwWeighting);
+        if (newWeight != null){
+            if (isNaN(newWeight) || newWeight<0 || newWeight >100){ //checks for crap or invalid num
+                Alert.alert("Invalid weighting","Weighting must be between 0 and 100");
+            return;
+        }
+
+        const currentTotal = getModuleWeightTotal(selectedModuleId,coursework);
+        if (currentTotal + newWeight > 100) {
+            Alert.alert(
+                "Weighting exceeds 100%",
+                `This module already has ${currentTotal}% allocated, so adding ${newWeight}% would make ${currentTotal + newWeight}%`
+                //so user understands why excess
+            );
+        return;
+       }
+      }
+
     setStatus("creating coursework...");
     try {
 
@@ -349,16 +380,13 @@ export default function HomeScreen() {
         body: JSON.stringify({
           title: cwTitle,
           dueDate: cwDueDate,
-          weighting: cwWeighting.trim() === "" ? null : Number(cwWeighting),
+          weighting: newWeight,
         }),
       });
 
       if (!res.ok) {//for backend failurs
 
         const txt = await res.text();
-        setStatus(`create coursework failed ${res.status}`);
-        Alert.alert("Create Coursework failed", `${res.status}\n${txt}`);
-        return;
 
       }
 
@@ -368,16 +396,16 @@ export default function HomeScreen() {
       if(ok){
         await scheduleCourseworkReminders(created);
       }
-
       setStatus("coursework created, refreshing...");
+
       await loadCoursework();//refresh list after successful create
+        } catch (e: any) {
+          setStatus("Create Coursework error");
+          Alert.alert("Create Coursework error", String(e?.message ?? e));
 
-    } catch (e: any) {
+        }
 
-      setStatus("Create Coursework error");
-      Alert.alert("Create Coursework error", String(e?.message ?? e));
 
-    }
   }
 
 
@@ -485,6 +513,20 @@ export default function HomeScreen() {
       return;
     }
 
+    if (newWeighting != null){
+        if (isNaN(newWeighting) || newWeighting < 0 || newWeighting > 100) {
+            Alert.alert("Invalid weighting","Weighting must be between 0 and 100");//invalid weighting edit gets rejected
+            return;
+        }
+
+        const currentTotal = getModuleWeightTotal(item.moduleId, coursework, item.id);//doesn't count current item when editing
+        if (currentTotal + newWeighting > 100){
+           Alert.alert("Weighting exceeds 100%",
+                `This module already has ${currentTotal}% allocated excluding this coursework, setting it to ${newWeighting}% would make ${currentTotal + newWeighting}%`);
+           return;
+        }
+    }
+
     setStatus("updating coursework...");
     try {
 
@@ -526,6 +568,8 @@ export default function HomeScreen() {
         //^cancel old reminders before rescheduling for new due date
         await scheduleCourseworkReminders(updated);
       }
+
+
 
       setEditingCwId(null);
       //^closes inline edit panel after save

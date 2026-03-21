@@ -43,7 +43,7 @@ public class CwController {
     /** post/users/{ userId}/modules/{moduleId}/coursework
      * creates coursework under specific module for user*/
     @PostMapping("/users/{userId}/modules/{moduleId}/coursework")
-    public ResponseEntity<CourseworkResponse> create(
+    public ResponseEntity<?> create(
             @PathVariable Long userId,
             @PathVariable Long moduleId,
             @RequestBody CreateCourseworkReq req
@@ -62,6 +62,14 @@ public class CwController {
             return ResponseEntity.badRequest().build();
         }
 
+        if(req.weighting() != null && (req.weighting() < 0 ||req.weighting() > 100)){
+            return ResponseEntity.badRequest().body("Weighting must be betweenn 0 and 100 ;(");
+        }
+
+        if (excWeightLim(moduleId, req.weighting(), null)){
+            return ResponseEntity.badRequest().body("Total coursework weighting for this module cant exceed 100");
+        }
+
         //save coursework linked to the module
         Coursework saved = cwRepo.save(
                 new Coursework(module, req.title(), req.dueDate(), req.weighting())
@@ -73,7 +81,7 @@ public class CwController {
 
     /**updates coursework under a specifc module for the user*/
     @PutMapping("/users/{userId}/modules/{moduleId}/coursework/{courseworkId}")
-    public ResponseEntity<CourseworkResponse> update(
+    public ResponseEntity<?> update(
             @PathVariable Long userId,
             @PathVariable Long moduleId,
             @PathVariable Long courseworkId,
@@ -109,6 +117,17 @@ public class CwController {
         if (req.dueDate() != null) {
             cw.setDueDate(req.dueDate());
         }
+
+        Integer nextWeight = req.weighting() != null ? req.weighting():cw.getWeighting();
+
+        if (nextWeight != null && (nextWeight < 0 || nextWeight > 100)){
+            return ResponseEntity.badRequest().body(java.util.Map.of("error","weighting must be between 0 and 100"));
+        }
+
+        if(excWeightLim(moduleId, nextWeight, courseworkId)){
+            return ResponseEntity.badRequest().body(java.util.Map.of("error","total module weighting cant exceed 100"));
+        }
+
         if (req.weighting() != null) {
             cw.setWeighting(req.weighting());
         }
@@ -154,6 +173,19 @@ public class CwController {
         return ResponseEntity.noContent().build();
     }
 
+    private boolean excWeightLim(Long moduleId, Integer newWeight, Long cwIdExlude){
+        if(newWeight == null) return false;//if no weighting like pas/fail, doesn't contribute
+
+        int currentTotal = cwRepo.findByModuleId(moduleId).stream() //get all cw for module for current total weighting
+                .filter(cw -> cwIdExlude == null || !cw.getId().equals(cwIdExlude))//so cw doesn't get updates for edits
+                .map(Coursework::getWeighting) //only weighting form cw
+                .filter(java.util.Objects::nonNull) //ignore ones with no weighting like pass fail ones
+
+                .reduce(0,Integer::sum);//adds it up from 0
+
+        return currentTotal + newWeight > 100;//check if new weighting > 100
+    };
+
 
 }
 
@@ -166,27 +198,18 @@ record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting, B
  * response DTO returned to the client
  * keeps response small by not returning full module/user objects*/
 record CourseworkResponse(
-        Long id,
-        Long moduleId,
-        Long userId,
-        String title,
-        LocalDate dueDate,
-        Integer weighting,
-        Boolean completed,
-        Instant completedAt,
-        java.math.BigDecimal scorePercent
+        Long id,Long moduleId,Long userId,String title,LocalDate dueDate,
+        Integer weighting,Boolean completed, Instant completedAt, java.math.BigDecimal scorePercent
 ) {
     static CourseworkResponse from(Coursework c) {
         return new CourseworkResponse(
-                c.getId(),
-                c.getModule().getId(),
+
+                c.getId(),c.getModule().getId(),
                 c.getModule().getUser().getId(),
-                c.getTitle(),
-                c.getDueDate(),
-                c.getWeighting(),
-                c.isCompleted(),
-                c.getCompletedAt(),
-                c.getScorePercent()
+                c.getTitle(),c.getDueDate(),
+                c.getWeighting(),c.isCompleted(),
+                c.getCompletedAt(),c.getScorePercent()
+
         );
     }
 }
