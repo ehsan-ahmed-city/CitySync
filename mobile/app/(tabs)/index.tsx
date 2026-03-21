@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,Button, View,} from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
@@ -55,6 +56,10 @@ function getModuleWeightTotal(moduleId: number, coursework: CourseworkDto[], exc
     return coursework.filter(c => c.moduleId === moduleId).filter(c => excludeCourseworkId == null || c.id !== excludeCourseworkId)
     .reduce((sum, c) => sum + (c.weighting ?? 0), 0);
 
+}
+
+function formatDate(date: Date){
+    return date.toISOString().split("T")[0];
 }
 
 function gradeLabel(pct: number) {
@@ -218,7 +223,8 @@ export default function HomeScreen() {
   //coursework form
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
   const [cwTitle, setCwTitle] = useState("PDD submission");
-  const [cwDueDate, setCwDueDate] = useState("2026-02-09");
+  const [cwDueDateObj, setCwDueDateObj] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [cwWeighting, setCwWeighting] = useState("30");
   const [editScorePercent, setEditScorePercent] = useState("");
 
@@ -241,11 +247,7 @@ export default function HomeScreen() {
       const txt = await res.text(); //read as text first for dbugging
 
       if (!res.ok) {
-
-        setStatus(`load modules failed ${res.status}`);
-        Alert.alert("Load modules failed", `${res.status}\n${txt}`);
-        return;
-
+        const txt = await res.text();
       }
 
       const json = JSON.parse(txt) as ModuleDto[];
@@ -379,7 +381,7 @@ export default function HomeScreen() {
         },
         body: JSON.stringify({
           title: cwTitle,
-          dueDate: cwDueDate,
+          dueDate: formatDate(cwDueDateObj),
           weighting: newWeight,
         }),
       });
@@ -643,7 +645,7 @@ export default function HomeScreen() {
   function getReminderLevel(daysLeft: number) {
     if (daysLeft <= 0) return { label: "OVERDUE", freq: "every 4 hours" };
     if (daysLeft <= 1) return { label: "URGENT", freq: "daily" };
-    if (daysLeft <= 3) return { label: "SOON", freq: "every 2 days" };
+    if (daysLeft <= 5) return { label: "SOON", freq: "every 2 days" };
     return { label: "NORMAL", freq: "weekly" };
   }
 
@@ -816,7 +818,10 @@ export default function HomeScreen() {
 
                 <Text style={styles.label}>Due date</Text>
 
-                <TextInput value={cwDueDate} onChangeText={setCwDueDate} style={styles.input} placeholder="YYYY-MM-DD" placeholderTextColor="#555" />
+                <Pressable onPress = {() => setShowDatePicker(true)} style={styles.input}>
+                    <Text style={{ color: "white" }}> {formatDate(cwDueDateObj)} </Text>
+                </Pressable>
+
               </View>
               <View style={{ width: 110 }}>
 
@@ -824,6 +829,18 @@ export default function HomeScreen() {
                 <TextInput value={cwWeighting} onChangeText={setCwWeighting} style={styles.input} keyboardType="numeric" placeholderTextColor="#555" />
               </View>
             </View>
+
+            {showDatePicker && (
+                <DateTimePicker
+                    value ={cwDueDateObj}
+                    mode = "date"
+                    display = "default"
+                    onChange={(event, selectedDate) =>{
+                        setShowDatePicker(false);
+                        if(selectedDate){setCwDueDateObj(selectedDate);}
+                    }}
+                />
+            )}
 
             <Text style={styles.label}>Title</Text>
             <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" placeholderTextColor="#555" />
