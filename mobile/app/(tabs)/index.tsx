@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,Button, View,} from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useAuth } from "@/hooks/useAuth";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
@@ -234,6 +235,8 @@ export default function HomeScreen() {
   const [editDueDate, setEditDueDate] = useState("");
   const [editWeighting, setEditWeighting] = useState("");
 
+  const { logout } = useAuth();
+
   async function loadModules() {//GET/users/{id}/modules
     setStatus("loading modules...");
     try {
@@ -247,7 +250,9 @@ export default function HomeScreen() {
       const txt = await res.text(); //read as text first for dbugging
 
       if (!res.ok) {
-        const txt = await res.text();
+        setStatus(`Load modules failed ${res.status}`);
+        Alert.alert("Load modules failed", `${res.status}\n${txt}`);
+        return;
       }
 
       const json = JSON.parse(txt) as ModuleDto[];
@@ -389,7 +394,9 @@ export default function HomeScreen() {
       if (!res.ok) {//for backend failurs
 
         const txt = await res.text();
-
+        setStatus(`create coursework failed ${res.status}`);
+        Alert.alert("Create coursework failed", `${res.status}\n${txt}`);
+        return;
       }
 
       const created = (await res.json()) as CourseworkDto;//new created cw parsed from backend
@@ -699,6 +706,7 @@ export default function HomeScreen() {
 
             <View style={styles.headerBtns}>
               <SecBtn title="Refresh" onPress={() => { loadModules(); loadCoursework(); }} />
+              <SecBtn title ="Logout" onPress = {logout} />
             </View>
           </View>
 

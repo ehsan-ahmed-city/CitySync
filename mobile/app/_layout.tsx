@@ -6,9 +6,9 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuth } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import LoginScreen from '@/components/LoginScreen';
-// import { useFonts } from 'expo-font';
+
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -16,15 +16,11 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function AppGate() {
   const colorScheme = useColorScheme();
-  const { auth, login, logout } = useAuth();
+  const { auth, login} = useAuth();
 
-//   const [loaded] = useFonts({
-//     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-//   });
-
-useEffect(() => {SplashScreen.hideAsync();}, []);
+  useEffect(() => {SplashScreen.hideAsync();}, []);
 
   if (auth.status === 'loading') {
     return (
@@ -35,21 +31,25 @@ useEffect(() => {SplashScreen.hideAsync();}, []);
   }
 
   if (auth.status === 'unauthenticated') {
-    return <LoginScreen onLogin={login} />;
+    return <LoginScreen onLogin={login} />;//login screen if not logged in
   }
 
-  return (
+  return (//shows app if logged in
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-{/*        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} /> */}
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-
         <Stack.Screen name="+not-found" />
       </Stack>
 
-{/*      <StatusBar style="auto" /> */}
     </ThemeProvider>
   );
+}
+
+  export default function RootLayout() {//making auth global by wrapping on app
+    return (
+        <AuthProvider>
+            <AppGate />
+        </AuthProvider>
+    );
 }
