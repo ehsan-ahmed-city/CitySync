@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView,StyleSheet,
   Text, TextInput, View,} from "react-native";
-import { getUserId, authHeaders } from "@/lib/api";
+import { getUserId, authHeaders, API_BASE } from "@/lib/api";
 
-const API_BASE = "http://192.168.0.12:8080";
-// const USER_ID = 1;
 
 const C = { bg: "#0B0B10", card: "#12121A", card2: "#161622", border: "rgba(255,255,255,0.08)",
   text: "#FFFFFF", sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#3B82F6",

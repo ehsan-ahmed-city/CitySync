@@ -6,10 +6,8 @@ import * as Notifications from "expo-notifications";
 import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
 import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
 import { getSelectedCalendarIds } from "@/lib/calendarPrefs";
-import { getUserId, authHeaders } from "@/lib/api";
+import { getUserId, authHeaders, API_BASE } from "@/lib/api";
 
-const API_BASE = "http://192.168.0.12:8080";//LAN ip
-// const USER_ID = 1;
 
 const CITY_CAMPUS_DESTINATION = "City, University of London, Northampton Square, London EC1V 0HB";
 

@@ -6,10 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
-import { getUserId, authHeaders } from "@/lib/api";
+import { getUserId, authHeaders, API_BASE } from "@/lib/api";
 
-const API_BASE = "http://192.168.0.12:8080";//my laptop LAN ip
-// const USER_ID = 1;
 
 //type helpers
 type ModuleDto = { id: number; userId: number; code: string; name: string; credits: number | null };
