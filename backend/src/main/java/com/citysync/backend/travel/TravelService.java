@@ -30,15 +30,11 @@ public class TravelService {
         try {
 
             //request body as for routes API spec
-            Map<String, Object> requestBody = Map.of(
+            Map<String, Object> requestBody = new java.util.LinkedHashMap<>();
 
-                "origins", List.of(Map.of("waypoint", Map.of("address", origin)
-                )),
-                "destinations", List.of(Map.of(
-                    "waypoint", Map.of("address", destination)
-                )),
-                "travelMode", "TRANSIT"
-            );
+            requestBody.put("origins", List.of(Map.of("waypoint", Map.of("address", origin))));
+            requestBody.put("destinations", List.of(Map.of("waypoint", Map.of("address", destination))));
+            requestBody.put("travelMode", "TRANSIT");
 
             if (arrivalTime != null && !arrivalTime.isBlank()){
                 requestBody.put("arrivalTime",arrivalTime);

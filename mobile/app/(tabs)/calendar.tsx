@@ -64,14 +64,14 @@ function ymd(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function parseDueDateAsEndOfDay(yyyyMmDd: string) {
-  //coursework deadline as 23:59 local time for display
+function parseDueDateTyp(yyyyMmDd: string) {
+  //coursework deadline as 5pm loocal time for display
   const [y, m, d] = yyyyMmDd.split("-").map(Number);
-  const dt = new Date(y, m - 1, d, 23, 59, 0, 0);
+  const dt = new Date(y, m - 1, d, 17, 0, 0, 0);
   return dt;
 }
 
-async function fetchTravelMins(home: string) {
+async function fetchTravelMins(home: string, arrivalTime?: string): Promise<number | null> {
   //calls backend /travel which proxies to google routes and returns seconds + fallback flag
   if (!home || home.trim() === "") return null;
 
@@ -80,7 +80,8 @@ async function fetchTravelMins(home: string) {
     const url =
       `${API_BASE}/travel` +
       `?origin=${encodeURIComponent(home.trim())}` + //encode so spaces/postcodes work in a URL
-      `&destination=${encodeURIComponent(CITY_CAMPUS_DESTINATION)}`;
+      `&destination=${encodeURIComponent(CITY_CAMPUS_DESTINATION)}`+
+      (arrivalTime ? `&arrivalTime=${encodeURIComponent(arrivalTime)}`:"");
 
     const res = await fetch(url, {
       headers: await authHeaders(),
@@ -99,7 +100,7 @@ async function fetchTravelMins(home: string) {
   }
 }
 
-function estimateTravelMinsHomeToCampusFallback(home: string) {
+function estimateMinsHomeUnifb(home: string) {
   if (!home || home.trim() === "") return null;
 
   /**for now until GMatrix so if they only postcode, assume 45 mins
@@ -223,7 +224,7 @@ export default function CalendarScreen() {
   const [buffer, setBuffer] = useState<number>(10);
   const [homeLocation, setHomeLocationState] = useState<string>("");
 
-  const [travelSource, setTravelSource] = useState<"google" | "fallback" | "none">("none");
+//   const [travelSource, setTravelSource] = useState<"google" | "fallback" | "none">("none");
   useEffect(() => {
     (async () => {
       setBuffer(await getLeaveBufferMins());
@@ -294,24 +295,6 @@ export default function CalendarScreen() {
 
       const bufferMins = buffer;
 
-      //try backend google routes first, else fallback estimate
-      setStatus("fetching travel time...");
-
-      let travelMins = await fetchTravelMins(homeLocation);
-      let nextTravelSource: "google" | "fallback" | "none";
-
-      if (travelMins != null) {
-
-        nextTravelSource = "google";
-        setTravelSource("google");
-
-      } else {
-
-        travelMins = estimateTravelMinsHomeToCampusFallback(homeLocation);
-        nextTravelSource = travelMins != null ? "fallback" : "none";
-        setTravelSource(nextTravelSource);
-
-      }
 
       //cancel old leave alerts before we schedule new ones
       await cancelAllLeaveSoonNotifs();
@@ -351,14 +334,15 @@ export default function CalendarScreen() {
           let routeMeta = "";
 
           //fixed destination so travel should be Home to City campus
-          if (travelMins != null) {
+          const eventArrivalTime =start.toISOString();
 
+          const liveTravelMins = await fetchTravelMins(homeLocation, eventArrivalTime);
+          const travelMins = liveTravelMins ?? estimateMinsHomeUnifb(homeLocation);
+
+          if (travelMins != null) {
             const leaveAt = calcLeaveTime(start, travelMins, bufferMins);
 
-            const notifId = await scheduleLeaveSoonNotif(
-
-              e.title ?? "Lecture",leaveAt,travelMins,bufferMins
-            );
+            const notifId = await scheduleLeaveSoonNotif(e.title ?? "Lecture",leaveAt, travelMins,bufferMins);
 
             if (notifId) {
               scheduledNotifIds.push(notifId);
@@ -366,9 +350,8 @@ export default function CalendarScreen() {
 
             leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
-            // routeMeta = `Route: Home to city campus (${travelMins} mins${travelSource === "fallback" ? " est." : ""})`;
-            routeMeta = `Route: Home -> City campus (${travelMins} mins${nextTravelSource === "fallback" ? " est." : ""})`;
-
+            const usedFallback = liveTravelMins == null;
+            routeMeta = `Route: Home -> City campus (${travelMins} mins${usedFallback ? " est." : ""})`;
           } else {
 
             routeMeta = "Set home address in settings to get leave time";
@@ -422,7 +405,7 @@ export default function CalendarScreen() {
       const coursework = (await cwRes.json()) as CourseworkDto[];
 
       const courseworkItems: UnifiedItem[] = coursework.map((c) => {
-        const end = parseDueDateAsEndOfDay(c.dueDate);
+        const end = parseDueDateTyp(c.dueDate); //typical due date time is 5pm
         const start = new Date(end);
         start.setMinutes(start.getMinutes() - 30);//show as a 30 min block
         return {
@@ -459,8 +442,8 @@ export default function CalendarScreen() {
       setSections(newSections);
 
       const notifNote = scheduledNotifIds.length > 0 ? ` • ${scheduledNotifIds.length} leave alerts set` : "";
-      // setStatus(`loaded ${merged.length} items (travel: ${travelSource})${notifNote}`);
-      setStatus(`loaded ${merged.length} items (travel: ${nextTravelSource})${notifNote}`);
+      setStatus(`loaded ${merged.length} items${notifNote}`);
+      //travel source is not one val for whole screen, some are now live, others fallback
 
     } catch (e: any) {
       setStatus("load error");
@@ -480,17 +463,7 @@ export default function CalendarScreen() {
         <Text style={{ color: "#d6d6df" }}>Week: {ymd(weekStart)} to {ymd(addDays(weekStart, 6))}</Text>
         <Text style={{ color: "#d6d6df" }}>Status: {status}</Text>
 
-        {travelSource === "fallback" && (
-          <Text style={{ color: "orange", fontSize: 12 }}>
-            Using estimated travel time(google API unavailable)
-          </Text>
-        )}
 
-        {travelSource === "google" && (
-          <Text style={{ color: "green", fontSize: 12 }}>
-            Live travel time from Google routes
-          </Text>
-        )}
 
         <Button title="Reload unified week" onPress={loadUnifiedWeek} />
 

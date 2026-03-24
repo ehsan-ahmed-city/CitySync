@@ -24,13 +24,14 @@ public class TravelController {
     @GetMapping
     public ResponseEntity<TravelResponse> getTravel(
             @RequestParam String origin,
-            @RequestParam String destination
+            @RequestParam String destination,
+            @RequestParam(required = false) String arrivalTime
     ) {
         if (origin == null || origin.isBlank() || destination == null || destination.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
 
-        int seconds = travelService.getTravelSeconds(origin.trim(), destination.trim());
+        int seconds = travelService.getTravelSeconds(origin.trim(), destination.trim(), arrivalTime);
         boolean fallback = (seconds == -1);
 
         return ResponseEntity.ok(new TravelResponse(seconds, fallback));
