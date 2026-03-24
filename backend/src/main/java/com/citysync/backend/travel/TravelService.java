@@ -26,27 +26,23 @@ public class TravelService {
      *use google routes API computeRouteMatrix transit + walking
      *falls back to -1 if api call fials so frontend can use user buffer alone
      */
-    public int getTravelSeconds(String origin, String destination) {
+    public int getTravelSeconds(String origin, String destination, String arrivalTime) {
         try {
 
             //request body as for routes API spec
             Map<String, Object> requestBody = Map.of(
 
-                "origins", List.of(Map.of(
-
-                    "waypoint", Map.of(
-                        "address", origin
-                    )
+                "origins", List.of(Map.of("waypoint", Map.of("address", origin)
                 )),
                 "destinations", List.of(Map.of(
-                    "waypoint", Map.of(
-
-                        "address", destination
-                    )
+                    "waypoint", Map.of("address", destination)
                 )),
-
                 "travelMode", "TRANSIT"
             );
+
+            if (arrivalTime != null && !arrivalTime.isBlank()){
+                requestBody.put("arrivalTime",arrivalTime);
+            }
 
             //to computeRouteMatrix
             //the field mask for google response
