@@ -4,7 +4,7 @@ import com.citysync.backend.module.Module;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "coursework")
@@ -24,7 +24,7 @@ public class Coursework {
 
 
     @Column(nullable = false)
-    private LocalDate dueDate;  //submission date for planning
+    private LocalDateTime dueDate;  //submission date for planning
 
     //weighting (0-100% of module) optional but helps students
     private Integer weighting;
@@ -44,7 +44,7 @@ public class Coursework {
         // jpa needs a constructore with no args
     }
 
-    public Coursework(Module module, String title, LocalDate dueDate, Integer weighting) {
+    public Coursework(Module module, String title, LocalDateTime dueDate, Integer weighting) {
         this.module = module;
         this.title = title;
         this.dueDate = dueDate;
@@ -55,7 +55,7 @@ public class Coursework {
     public Long getId() { return id; }
     public Module getModule() { return module; }
     public String getTitle() { return title; }
-    public LocalDate getDueDate() { return dueDate; }
+    public LocalDateTime getDueDate() { return dueDate; }
     public Integer getWeighting() { return weighting; }
     public Instant getCreatedAt() { return createdAt; }
 
@@ -69,7 +69,7 @@ public class Coursework {
         this.title = title;
     }
 
-    public void setDueDate(LocalDate dueDate) {
+    public void setDueDate(LocalDateTime dueDate) {
         this.dueDate = dueDate;
     }
 

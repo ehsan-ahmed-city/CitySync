@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @RestController
 public class CwController {
@@ -190,16 +190,16 @@ public class CwController {
 }
 
 //request body JSON for create coursework
-record CreateCourseworkReq(String title, LocalDate dueDate, Integer weighting) {}
+record CreateCourseworkReq(String title, LocalDateTime dueDate, Integer weighting) {}
 
-record UpdateCourseworkReq(String title, LocalDate dueDate, Integer weighting, Boolean completed, java.math.BigDecimal scorePercent) {}
+record UpdateCourseworkReq(String title, LocalDateTime dueDate, Integer weighting, Boolean completed, java.math.BigDecimal scorePercent) {}
 
 /**
  * response DTO returned to the client
  * keeps response small by not returning full module/user objects*/
 record CourseworkResponse(
-        Long id,Long moduleId,Long userId,String title,LocalDate dueDate,
-        Integer weighting,Boolean completed, Instant completedAt, java.math.BigDecimal scorePercent
+        Long id, Long moduleId, Long userId, String title, LocalDateTime dueDate,
+        Integer weighting, Boolean completed, Instant completedAt, java.math.BigDecimal scorePercent
 ) {
     static CourseworkResponse from(Coursework c) {
         return new CourseworkResponse(

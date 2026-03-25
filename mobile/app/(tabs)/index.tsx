@@ -58,7 +58,20 @@ function getModuleWeightTotal(moduleId: number, coursework: CourseworkDto[], exc
 }
 
 function formatDate(date: Date){
-    return date.toISOString().split("T")[0];
+//^js date object to datetime string for backend
+    const year = date.getFullYear();
+
+    const month = String(date.getMonth() +1).padStart(2, "0");//using pastart sp it's like 01 or 03 instead of 1 or 3
+
+    const day = String(date.getDate()).padStart(2, "0").;
+    //^this also padded to 2 digits
+
+    const hours = String(date.getHours()).padStart(2,"0");
+    const mins = String(date.getMinutes()).padStart(2,"0");
+    const secs="00";//seconds dont matter
+
+    return `${year}-${month}-${day}T${hours}:${mins}:${secs}`;
+
 }
 
 function gradeLabel(pct: number) {
@@ -224,14 +237,18 @@ export default function HomeScreen() {
   const [cwTitle, setCwTitle] = useState("PDD submission");
   const [cwDueDateObj, setCwDueDateObj] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const [cwWeighting, setCwWeighting] = useState("30");
   const [editScorePercent, setEditScorePercent] = useState("");
 
   //cw edit state
   const [editingCwId, setEditingCwId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editDueDate, setEditDueDate] = useState("");
+  const [editDueDate, setEditDueDate] = useState<Date | null>(null);
   const [editWeighting, setEditWeighting] = useState("");
+  const [showEditDP, setEditDP] = useState(false); //editing date picker and setter
+  const [showEditTP, setEditTP] = useState(false); //editing time picker and setter
 
   const { logout } = useAuth();
 
@@ -384,7 +401,7 @@ export default function HomeScreen() {
         },
         body: JSON.stringify({
           title: cwTitle,
-          dueDate: formatDate(cwDueDateObj),
+          dueDate: formatDateTime(cwDueDateObj),
           weighting: newWeight,
         }),
       });
@@ -415,6 +432,14 @@ export default function HomeScreen() {
 
   }
 
+function formatTime(date: Date) {
+    //only time portion of date for ui
+    const hours = String(date.getHours()).padStart(2,"0");
+    const mins = String(date.getMinutes().padStart(2,"0");
+
+    return `${hours}:${mins}`;
+
+}
 
 
   async function updateModule(
@@ -826,8 +851,15 @@ export default function HomeScreen() {
 
                 <Pressable onPress = {() => setShowDatePicker(true)} style={styles.input}>
                     <Text style={{ color: "white" }}> {formatDate(cwDueDateObj)} </Text>
+                    {/* shows current selected date */}
                 </Pressable>
 
+                <Text style = {styles.label}> Due time  </Text>
+                <Pressable onPress = {}() => setShowTimePicker(true)} style={styles.input}>
+                {/*should open time picker when press*/}
+                    <Text style={{ color: "white" }}>{formatTime(cwDueDateObj)}</Text>
+                    {/* shos current sleected time*/}
+                </Pressable>
               </View>
               <View style={{ width: 110 }}>
 
@@ -837,13 +869,32 @@ export default function HomeScreen() {
             </View>
 
             {showDatePicker && (
-                <DateTimePicker
-                    value ={cwDueDateObj}
-                    mode = "date"
-                    display = "default"
-                    onChange={(event, selectedDate) =>{
+                <DateTimePicker value ={cwDueDateObj} mode = "date"
+                    display = "default" onChange={(event, selectedDate) =>{
                         setShowDatePicker(false);
                         if(selectedDate){setCwDueDateObj(selectedDate);}
+                    }}/>
+            )}
+
+            {showTimePicker &&(
+                <DateTimePicker value={cwDueDateObj} mode = "time" display ="default"
+                //shows full datetime but only allowed to pick time
+                onChange{(event, selectedTime)} => {
+                    setShowTimePicker(false);
+                    //close picker after selecting
+                    if (selectedTime){
+                        const next = new Date(cwDueDateObj);
+                        //same existing date only time change
+
+                        next.setHours(selectedTime.getHours());
+                        next.setMins(selectedTime.getMinutes());
+                        next.setSecs(0); next.setMs(0);
+                        //hours and seconds applied, miliseconds not needed
+
+                        setCwDueDateObj(next);
+                        //updated with new time
+
+                        }
                     }}
                 />
             )}
@@ -967,10 +1018,8 @@ export default function HomeScreen() {
                       ) : null}
                     </View>
                   </View>
-                );
-              }}
-              ListEmptyComponent={<Text style={styles.muted}>No coursework yet.</Text>}
-            />
+                );}}
+              ListEmptyComponent={<Text style={styles.muted}>No coursework yet.</Text>}/>
           </View>
 
         </ScrollView>

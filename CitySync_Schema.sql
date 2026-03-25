@@ -36,7 +36,7 @@ ALTER TABLE public.auth_codes OWNER TO postgres;
 CREATE TABLE public.coursework (
     id bigint NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
-    due_date date NOT NULL,
+    due_date timestamp NOT NULL,
     title character varying(255) NOT NULL,
     weighting integer,
     module_id bigint NOT NULL,
