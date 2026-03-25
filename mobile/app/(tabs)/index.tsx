@@ -63,7 +63,7 @@ function formatDate(date: Date){
 
     const month = String(date.getMonth() +1).padStart(2, "0");//using pastart sp it's like 01 or 03 instead of 1 or 3
 
-    const day = String(date.getDate()).padStart(2, "0").;
+    const day = String(date.getDate()).padStart(2, "0");
     //^this also padded to 2 digits
 
     const hours = String(date.getHours()).padStart(2,"0");
@@ -245,7 +245,7 @@ export default function HomeScreen() {
   //cw edit state
   const [editingCwId, setEditingCwId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editDueDate, setEditDueDate] = useState<Date | null>(null);
+  const [editDueDateObj, setEditDueDateObj] = useState<Date | null>(null);
   const [editWeighting, setEditWeighting] = useState("");
   const [showEditDP, setEditDP] = useState(false); //editing date picker and setter
   const [showEditTP, setEditTP] = useState(false); //editing time picker and setter
@@ -401,7 +401,7 @@ export default function HomeScreen() {
         },
         body: JSON.stringify({
           title: cwTitle,
-          dueDate: formatDateTime(cwDueDateObj),
+          dueDate: formatDate(cwDueDateObj),
           weighting: newWeight,
         }),
       });
@@ -435,7 +435,7 @@ export default function HomeScreen() {
 function formatTime(date: Date) {
     //only time portion of date for ui
     const hours = String(date.getHours()).padStart(2,"0");
-    const mins = String(date.getMinutes().padStart(2,"0");
+    const mins = String(date.getMinutes()).padStart(2,"0");
 
     return `${hours}:${mins}`;
 
@@ -537,13 +537,10 @@ function formatTime(date: Date) {
   async function updateCoursework(item: CourseworkDto) {//updates title, due date and weighting for coursework
 
     const newTitle = editTitle.trim() || item.title;
-    const newDueDate = editDueDate.trim() || item.dueDate;
+    const newDueDate = editDueDateObj ?? new Date(item.dueDate);
+    //obj because not keeping as string now^
     const newWeighting = editWeighting.trim() === "" ? item.weighting : Number(editWeighting.trim());
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDueDate)) {
-      Alert.alert("Invalid date", "please use YYYY-MM-DD format");
-      return;
-    }
 
     if (newWeighting != null){
         if (isNaN(newWeighting) || newWeighting < 0 || newWeighting > 100) {
@@ -576,7 +573,7 @@ function formatTime(date: Date) {
           },
           body: JSON.stringify({
 
-            title: newTitle,dueDate: newDueDate,weighting: newWeighting,
+            title: newTitle,dueDate: formatDate(newDueDate),weighting: newWeighting,
             scorePercent: editScorePercent.trim() === "" ? null : Number(editScorePercent.trim()),
           }),
 
@@ -673,15 +670,15 @@ function formatTime(date: Date) {
 
 
   function getReminderLevel(daysLeft: number) {
+  //reminders for how close a coursework is
     if (daysLeft <= 0) return { label: "OVERDUE", freq: "every 4 hours" };
     if (daysLeft <= 1) return { label: "URGENT", freq: "daily" };
     if (daysLeft <= 5) return { label: "SOON", freq: "every 2 days" };
     return { label: "NORMAL", freq: "weekly" };
   }
 
-  function daysUntil(yyyyMmDd: string) {
-    const [y, m, d] = yyyyMmDd.split("-").map(Number);
-    const due = new Date(y, m - 1, d, 23, 59, 0, 0);
+  function daysUntil(dateTimeString: string) {
+    const due = new Date(dateTimeString);
     const ms = due.getTime() - Date.now();
     return Math.floor(ms / (1000 * 60 * 60 * 24));
   }
@@ -690,7 +687,8 @@ function formatTime(date: Date) {
 
     setEditingCwId(item.id);
     setEditTitle(item.title);
-    setEditDueDate(item.dueDate);
+//     setEditDueDate(item.dueDate);
+    setEditDueDateObj(new Date(item.dueDate));
     setEditWeighting(item.weighting != null ? String(item.weighting) : "");
     setEditScorePercent(item.scorePercent != null ? String(item.scorePercent) : "");
   }
@@ -850,12 +848,12 @@ function formatTime(date: Date) {
                 <Text style={styles.label}>Due date</Text>
 
                 <Pressable onPress = {() => setShowDatePicker(true)} style={styles.input}>
-                    <Text style={{ color: "white" }}> {formatDate(cwDueDateObj)} </Text>
+                    <Text style={{ color: "white" }}> {formatDate(cwDueDateObj).split("T")[0]} </Text>
                     {/* shows current selected date */}
                 </Pressable>
 
                 <Text style = {styles.label}> Due time  </Text>
-                <Pressable onPress = {}() => setShowTimePicker(true)} style={styles.input}>
+                <Pressable onPress = {() => setShowTimePicker(true)} style={styles.input}>
                 {/*should open time picker when press*/}
                     <Text style={{ color: "white" }}>{formatTime(cwDueDateObj)}</Text>
                     {/* shos current sleected time*/}
@@ -879,7 +877,7 @@ function formatTime(date: Date) {
             {showTimePicker &&(
                 <DateTimePicker value={cwDueDateObj} mode = "time" display ="default"
                 //shows full datetime but only allowed to pick time
-                onChange{(event, selectedTime)} => {
+                onChange={(event, selectedTime) => {
                     setShowTimePicker(false);
                     //close picker after selecting
                     if (selectedTime){
@@ -887,8 +885,8 @@ function formatTime(date: Date) {
                         //same existing date only time change
 
                         next.setHours(selectedTime.getHours());
-                        next.setMins(selectedTime.getMinutes());
-                        next.setSecs(0); next.setMs(0);
+                        next.setMinutes(selectedTime.getMinutes());
+                        next.setSeconds(0); next.setMilliseconds(0);
                         //hours and seconds applied, miliseconds not needed
 
                         setCwDueDateObj(next);
@@ -960,17 +958,55 @@ function formatTime(date: Date) {
                             placeholderTextColor="#555"
                           />
 
-                          <Text style={styles.editLabel}>Due date (YYYY-MM-DD)</Text>
-                          <TextInput
+                          <Text style={styles.editLabel}>Due date</Text>
+                          <Pressable onPress={() => setEditDP(true)} style={styles.editInput}>
+                            <Text style = {{ color : "white" }}>
+                                {editDueDateObj ? formatDate(editDueDateObj).split("T")[0] : ""}
+                            </Text>
+                          </Pressable>
 
-                            value={editDueDate}
-                            onChangeText={setEditDueDate}
-                            style={styles.editInput}
-                            placeholder="YYYY-MM-DD"
-                            placeholderTextColor="#555"
+                          <Text style={styles.editLabel}>Due timee</Text>
+                          <Pressable onPress={() => setEditTP(true)} style={styles.editInput}>
+                            <Text style = {{ color : "white" }}>
+                                {editDueDateObj ? formatTime(editDueDateObj) : ""}
+                            </Text>
+                          </Pressable>
 
-                          />
+                            {/*the edit date picker*/}
+                            {showEditDP && editDueDateObj &&(
+                            //mode only for editing the date part
+                                <DateTimePicker value={editDueDateObj} mode ="date" display = "default"
+                                onChange={(event, selectedDate) => {
+                                    setEditDP(false);//closes picker after seletcing/canceling
+                                    if (selectedDate){
+                                        const next = new Date(editDueDateObj);
+                                        next.setFullYear(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate());
+                                        setEditDueDateObj(next);
+                                        //if selected them only date is changed and not time and is saved
+                                    }
+                                 }}
+                              />)}
 
+                            {/*dit time picker*/}
+                            {showEditTP && editDueDateObj &&(
+                                //mode only for editing the time part like hour/min
+                                <DateTimePicker value={editDueDateObj} mode ="time" display = "default"
+                                onChange={(event, selectedTime) => {
+                                    setEditTP(false);//closes picker after seletcing/canceling
+                                    if (selectedTime){
+                                        const next = new Date(editDueDateObj);
+                                        next.setHours(selectedTime.getHours());
+                                        next.setMinutes(selectedTime.getMinutes());
+                                        //^same date only time is changed
+
+                                        next.setSeconds(0);
+                                        next.setMilliseconds(0);
+                                        //seconds and miliseconds not needed for cw deadline
+                                        setEditDueDateObj(next);
+                                        //if selected them only date is changed and not time and is saved
+                                    }
+                                 }}
+                              />)}
                           <Text style={styles.editLabel}>Weight %</Text>
                           <TextInput
 
