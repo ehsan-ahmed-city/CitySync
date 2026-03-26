@@ -1,98 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {Alert,FlatList,KeyboardAvoidingView,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,Button, View,} from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useAuth } from "@/hooks/useAuth";
+import HeaderCard from "@/components/home/HeaderCard";
+import { PrimBtn, SecBtn, DangerBtn } from "@/components/home/ActionBtns";
+import type {CourseworkDto} from "@/lib/CwHelpers";
+import GradeCard from "@/components/home/GradeCard";
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet,} from "react-native";
+import ModuleCard from "@/components/home/ModuleCard";
+import CwCard from "@/components/home/CwCard";
+
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
 //^importing to index from cwreminder
 import { getUserId, authHeaders, API_BASE } from "@/lib/api";
 
-import {calcGrade,getModuleWeightTotal, formatDate, formatTime, daysUntil, gradeLabel, gradeColour, getReminderLevel} from "@/lib/cwHelpers";
 
 //type helpers
 type ModuleDto = { id: number; userId: number; code: string; name: string; credits: number | null };
-
-function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: CourseworkDto[] }) {
-  const cwForModule = coursework.filter((c) => c.moduleId === moduleId);
-  const grade = calcGrade(cwForModule);
-
-  if (!grade) {
-
-    return (
-
-      <View style={gradeStyles.container}>
-        <Text style={gradeStyles.heading}>Grade Prediction</Text>
-        <Text style={gradeStyles.hint}>
-          Add coursework with weightings to see your predicted grade.
-        </Text>
-      </View>
-
-    );
-  }
-
-  const { allocWeight, confirmedMark ,completedWeight, remainingWeight, predictedMin, predictedMax } = grade;
-  //^calculated vals for display
-
-  const progressFraction = allocWeight > 0 ? completedWeight / allocWeight : 0;
-  //^completed weighting shown as fraction of allocated weighting
-
-  return (
-    <View style={gradeStyles.container}>
-      <Text style={gradeStyles.heading}>Grade Prediction</Text>
-
-      <View style={gradeStyles.barTrack}>
-        <View style={[gradeStyles.barFill, { flex: progressFraction }]} />
-        <View style={{ flex: 1 - progressFraction }} />
-      </View>
-
-      <Text style={gradeStyles.barLabel}>
-        {completedWeight}% of {allocWeight}% submitted
-        {remainingWeight > 0 ? ` • ${remainingWeight}% remaining` : " all submitted"}
-      </Text>
-
-      <View style={gradeStyles.rangeRow}>
-        <View style={gradeStyles.rangeBox}>
-
-          <Text style={gradeStyles.rangeValue}>{predictedMin}%</Text>
-          <Text style={[gradeStyles.rangeLabel, { color: gradeColour(predictedMin) }]}>
-
-            {gradeLabel(predictedMin)}
-
-          </Text>
-          <Text style={gradeStyles.rangeHint}>Minimum{"\n"}(0% on rest)</Text>
-        </View>
-
-        <Text style={gradeStyles.rangeSep}>to</Text>
-
-        <View style={gradeStyles.rangeBox}>
-          <Text style={gradeStyles.rangeValue}>{predictedMax}%</Text>
-
-          <Text style={[gradeStyles.rangeLabel, { color: gradeColour(predictedMax) }]}>
-            {gradeLabel(predictedMax)}
-          </Text>
-
-          <Text style={gradeStyles.rangeHint}>Maximum{"\n"}(100% on rest)</Text>
-        </View>
-      </View>
-
-      {allocWeight > 100 &&( //if saved weighting > 100
-        <Text style = {[gradeStyles.hint, {color: "#EF4444"}]}>
-            Invalid module input: coursework weighting exceeds 100%
-        </Text>
-      )}
-
-      {remainingWeight === 0 && (
-
-        <Text style={[gradeStyles.hint, { color: "#22C55E" }]}>
-
-          All coursework submitted, final grade is {Math.round(confirmedMark)}%
-        </Text>
-      )}
-    </View>
-  );
-}
-
 
 
 export default function HomeScreen() {
@@ -307,9 +232,6 @@ export default function HomeScreen() {
 
 
   }
-
-
-
 
   async function updateModule(
   //^updates an existing module
@@ -537,11 +459,6 @@ export default function HomeScreen() {
 
   }
 
-
-
-
-
-
   function startEditingCw(item: CourseworkDto) {//opens edit panel and fills current coursework vals
 
     setEditingCwId(item.id);
@@ -572,344 +489,58 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.container}>
-          {/* Header */}
-            <headerCard
+          <HeaderCard
             userId={userId}
             status={status}
-            modulesCount={stats.modules}
-            cwCount={stats.coursework}
-            pendingCount={stats.pending}
-            onRefresh={() => {loadModules(); loadCoursework(); }}
+            stats={stats}
+            onRefresh={() => { loadModules(); loadCoursework(); }}
             onLogout={logout}
-            />
+          />
 
+          <ModuleCard
+            modules={modules}
+            coursework={coursework}
+            mCode={mCode}
+            setMCode={setMCode}
+            mName={mName}
+            setMName={setMName}
+            mCredits={mCredits}
+            setMCredits={setMCredits}
+            createModule={createModule}
+            updateModule={updateModule}
+            deleteModule={deleteModule}
+          />
 
-          {/* Add Module */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Add module</Text>
-
-            <View style={styles.formRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Code</Text>
-                <TextInput value={mCode} onChangeText={setMCode} style={styles.input} placeholder="e.g. IN3007" placeholderTextColor="#555" />
-              </View>
-              <View style={{ width: 110 }}>
-                <Text style={styles.label}>Credits</Text>
-                <TextInput value={mCredits} onChangeText={setMCredits} style={styles.input} keyboardType="numeric" placeholderTextColor="#555" />
-              </View>
-            </View>
-
-            <Text style={styles.label}>Name</Text>
-            <TextInput value={mName} onChangeText={setMName} style={styles.input} placeholder="Module name" placeholderTextColor="#555" />
-
-            <View style={styles.rowGap}>
-              <PrimBtn title="Create module" onPress={createModule} />
-            </View>
-          </View>
-
-          {/* Modules list */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Modules</Text>
-
-            <FlatList
-              data={modules}
-              keyExtractor={(m) => String(m.id)}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-              renderItem={({ item }) => (
-
-                <View style={styles.itemCard}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemTitle}>{item.code}</Text>
-                    <Text style={styles.itemSub}>{item.name}</Text>
-                    <Text style={styles.muted}>Credits: {item.credits ?? "n/a"} • ID: {item.id}</Text>
-
-                    <GradeCard moduleId={item.id} coursework={coursework} />
-                  </View>
-
-                  <View style={{ gap: 8 }}>
-                    <Button title="Rename" onPress={() =>
-                        Alert.prompt(
-                          "Rename module",
-                          "Enter a new module name",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Save",
-                              onPress: (value) => {
-
-                                const nextName = value?.trim();
-                                if (!nextName) return;
-                                updateModule(item.id, { name: nextName });
-                              },
-
-                            },
-                          ],
-                          "plain-text",
-                          item.name
-                        )
-                      }
-                    />
-                    <DangerBtn
-                      title="Delete"
-                      onPress={() =>
-                        Alert.alert(
-                          "Delete module?",
-                          "This will also delete it's coursework",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            { text: "Delete", style: "destructive", onPress: () => deleteModule(item.id) },
-                          ]
-                        )
-                      }
-                    />
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={<Text style={styles.muted}>No modules yet.</Text>}
-            />
-          </View>
-
-          {/*Add cw */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Add coursework</Text>
-
-            {/*changing module dropdown from id to text*/}
-            <View style={{ borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
-              <Picker
-                selectedValue={selectedModuleId}
-                onValueChange={(v) => setSelectedModuleId(v)}
-              >
-              {/*dropdown optins from the modules*/}
-                {modules.map((m) => (
-
-                  <Picker.Item
-                    key={m.id}//for react list
-
-                    label={`${m.code} — ${m.name} (ID ${m.id})`}
-                    //^what user sees
-                    value={m.id}//set into the module thats selected
-                  />
-
-                ))}
-              </Picker>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={{ flex: 1 }}>
-
-                <Text style={styles.label}>Due date</Text>
-
-                <Pressable onPress = {() => setShowDatePicker(true)} style={styles.input}>
-                    <Text style={{ color: "white" }}> {formatDate(cwDueDateObj).split("T")[0]} </Text>
-                    {/* shows current selected date */}
-                </Pressable>
-
-                <Text style = {styles.label}> Due time  </Text>
-                <Pressable onPress = {() => setShowTimePicker(true)} style={styles.input}>
-                {/*should open time picker when press*/}
-                    <Text style={{ color: "white" }}>{formatTime(cwDueDateObj)}</Text>
-                    {/* shos current sleected time*/}
-                </Pressable>
-              </View>
-              <View style={{ width: 110 }}>
-
-                <Text style={styles.label}>Weight %</Text>
-                <TextInput value={cwWeighting} onChangeText={setCwWeighting} style={styles.input} keyboardType="numeric" placeholderTextColor="#555" />
-              </View>
-            </View>
-
-            {showDatePicker && (
-                <DateTimePicker value ={cwDueDateObj} mode = "date"
-                    display = "default" onChange={(event, selectedDate) =>{
-                        setShowDatePicker(false);
-                        if(selectedDate){setCwDueDateObj(selectedDate);}
-                    }}/>
-            )}
-
-            {showTimePicker &&(
-                <DateTimePicker value={cwDueDateObj} mode = "time" display ="default"
-                //shows full datetime but only allowed to pick time
-                onChange={(event, selectedTime) => {
-                    setShowTimePicker(false);
-                    //close picker after selecting
-                    if (selectedTime){
-                        const next = new Date(cwDueDateObj);
-                        //same existing date only time change
-
-                        next.setHours(selectedTime.getHours());
-                        next.setMinutes(selectedTime.getMinutes());
-                        next.setSeconds(0); next.setMilliseconds(0);
-                        //hours and seconds applied, miliseconds not needed
-
-                        setCwDueDateObj(next);
-                        //updated with new time
-
-                        }
-                    }}
-                />
-            )}
-
-            <Text style={styles.label}>Title</Text>
-            <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" placeholderTextColor="#555" />
-
-            <View style={styles.rowGap}>
-              <PrimBtn title="Create coursework" onPress={createCoursework} />
-            </View>
-          </View>
-
-          {/* Coursework list */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Coursework</Text>
-
-            <FlatList
-              data={coursework}
-              keyExtractor={(c) => String(c.id)}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-              renderItem={({ item }) => {
-
-                const dl = daysUntil(item.dueDate);
-                const lvl = getReminderLevel(dl);
-
-                const isEditing = editingCwId === item.id;
-                return (
-
-                  <View style={styles.itemCard}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.itemTitle}>{item.title}</Text>
-                      <Text style={styles.muted}>
-                        Due: {item.dueDate} • Module: {item.moduleId} • Weight: {item.weighting ?? "n/a"}%
-                        {item.scorePercent != null ? `•Mark: ${item.scorePercent}%` : ""}
-                      </Text>
-
-                      <Text style={styles.badge}>
-                        {item.completed ? "completed" : "pending"}
-                      </Text>
-
-                      {!item.completed ? (
-                        (() => {
-                          return (
-
-                            <Text style={styles.muted}>
-                              Reminder: {lvl.label} ({lvl.freq})
-                            </Text>
-
-                          );
-                        })()
-                      ) : null}
-
-                      {isEditing ? (
-
-                        <View style={styles.editPanel}>
-                          <Text style={styles.editLabel}>Title</Text>
-                          <TextInput
-
-                            value={editTitle}
-                            onChangeText={setEditTitle}
-                            style={styles.editInput}
-                            placeholderTextColor="#555"
-                          />
-
-                          <Text style={styles.editLabel}>Due date</Text>
-                          <Pressable onPress={() => setEditDP(true)} style={styles.editInput}>
-                            <Text style = {{ color : "white" }}>
-                                {editDueDateObj ? formatDate(editDueDateObj).split("T")[0] : ""}
-                            </Text>
-                          </Pressable>
-
-                          <Text style={styles.editLabel}>Due timee</Text>
-                          <Pressable onPress={() => setEditTP(true)} style={styles.editInput}>
-                            <Text style = {{ color : "white" }}>
-                                {editDueDateObj ? formatTime(editDueDateObj) : ""}
-                            </Text>
-                          </Pressable>
-
-                            {/*the edit date picker*/}
-                            {showEditDP && editDueDateObj &&(
-                            //mode only for editing the date part
-                                <DateTimePicker value={editDueDateObj} mode ="date" display = "default"
-                                onChange={(event, selectedDate) => {
-                                    setEditDP(false);//closes picker after seletcing/canceling
-                                    if (selectedDate){
-                                        const next = new Date(editDueDateObj);
-                                        next.setFullYear(selectedDate.getFullYear(),selectedDate.getMonth(),selectedDate.getDate());
-                                        setEditDueDateObj(next);
-                                        //if selected them only date is changed and not time and is saved
-                                    }
-                                 }}
-                              />)}
-
-                            {/*dit time picker*/}
-                            {showEditTP && editDueDateObj &&(
-                                //mode only for editing the time part like hour/min
-                                <DateTimePicker value={editDueDateObj} mode ="time" display = "default"
-                                onChange={(event, selectedTime) => {
-                                    setEditTP(false);//closes picker after seletcing/canceling
-                                    if (selectedTime){
-                                        const next = new Date(editDueDateObj);
-                                        next.setHours(selectedTime.getHours());
-                                        next.setMinutes(selectedTime.getMinutes());
-                                        //^same date only time is changed
-
-                                        next.setSeconds(0);
-                                        next.setMilliseconds(0);
-                                        //seconds and miliseconds not needed for cw deadline
-                                        setEditDueDateObj(next);
-                                        //if selected them only date is changed and not time and is saved
-                                    }
-                                 }}
-                              />)}
-                          <Text style={styles.editLabel}>Weight %</Text>
-                          <TextInput
-
-                            value={editWeighting}
-                            onChangeText={setEditWeighting}
-                            style={styles.editInput}
-                            keyboardType="numeric"
-                            placeholderTextColor="#555"
-
-                          />
-
-                          <Text style = {styles.editLabel}>Score %</Text>
-                          <TextInput
-                            value={editScorePercent}
-                            onChangeText={setEditScorePercent}
-                            style={styles.editInput}
-                            keyboardType="numeric"
-                            placeholder= "e.g 65"
-                            placeholderTextColor= "#555"
-                          />
-
-                          <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-
-                            <PrimBtn title="Save" onPress={() => updateCoursework(item)} />
-                            <SecBtn title="Cancel" onPress={() => setEditingCwId(null)} />
-
-                          </View>
-                        </View>
-
-                      ) : null}
-                    </View>
-
-                    <View style={{ gap: 8 }}>
-                      <SecBtn
-                        title={item.completed ? "Mark Incomplete" : "Mark Complete"}
-                        onPress={() => setCourseworkCompleted(item, !item.completed)}
-                      />
-
-                      {!isEditing ? (
-
-                        <SecBtn
-                          title="Edit"
-                          onPress={() => startEditingCw(item)}
-                        />
-                      ) : null}
-                    </View>
-                  </View>
-                );}}
-              ListEmptyComponent={<Text style={styles.muted}>No coursework yet.</Text>}/>
-          </View>
+          <CwCard
+            modules={modules}
+            coursework={coursework}
+            selectedModuleId={selectedModuleId}
+            setSelectedModuleId={setSelectedModuleId}
+            cwTitle={cwTitle}
+            setCwTitle={setCwTitle}
+            cwDueDateObj={cwDueDateObj}
+            setCwDueDateObj={setCwDueDateObj}
+            showDatePicker={showDatePicker}
+            setShowDatePicker={setShowDatePicker}
+            showTimePicker={showTimePicker}
+            setShowTimePicker={setShowTimePicker}
+            cwWeighting={cwWeighting}
+            setCwWeighting={setCwWeighting}
+            createCoursework={createCoursework}
+            editingCwId={editingCwId}
+            setEditingCwId={setEditingCwId}
+            editTitle={editTitle}
+            setEditTitle={setEditTitle}
+            editDueDateObj={editDueDateObj}
+            setEditDueDateObj={setEditDueDateObj}
+            editWeighting={editWeighting}
+            setEditWeighting={setEditWeighting}
+            editScorePercent={editScorePercent}
+            setEditScorePercent={setEditScorePercent}
+            updateCoursework={updateCoursework}
+            setCourseworkCompleted={setCourseworkCompleted}
+            startEditingCw={startEditingCw}
+          />
 
         </ScrollView>
 
@@ -920,70 +551,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-
-  safe: { flex: 1, backgroundColor: "#0b0b0f" },container: { padding: 16, paddingBottom: 40, gap: 14 },//page padding/spacing
-                   //^app bg
-  header: { padding: 16, borderRadius: 18, backgroundColor: "#14141a", borderWidth: 1, borderColor: "#232331" },
-  title: { fontSize: 28, fontWeight: "800", color: "white" },//title text
-  subTitle: { marginTop: 6, color: "#a9a9b6" }, //subtitle text
-
-  pillRow: { marginTop: 12, flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  pill: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: "#1f1f2a", borderWidth: 1, borderColor: "#2b2b3b" },//container
-  pillText: { color: "#d6d6df", fontWeight: "600" },//pill label
-
-  headerBtns: { marginTop: 12, flexDirection: "row", gap: 10 },
-  //^header button row
-
-  card: { padding: 16, borderRadius: 18, backgroundColor: "#14141a", borderWidth: 1, borderColor: "#232331" },//sectn card container
-  cardTitle: { color: "white", fontSize: 16, fontWeight: "800", marginBottom: 10 },
-  label: { color: "#a9a9b6", marginBottom: 6, fontWeight: "600" },//the input label
-  input: { backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 12, padding: 12, color: "white" },
-  formRow: { flexDirection: "row", gap: 10, marginBottom: 12 },//row layot for grouped inputs
-  rowGap: { marginTop: 12, gap: 10 },//spacing between button/rows
-
-  itemCard: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#262638" }, // list item card
-  itemTitle: { color: "white", fontSize: 15, fontWeight: "800" },//title
-  itemSub: { color: "#d6d6df", marginTop: 3, fontWeight: "600" },//item subtitle
-
-  muted: { color: "#a9a9b6", marginTop: 6 },
-  //^any text underneath
-
-  btnPrimary: { backgroundColor: "#3b82f6", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
-  btnPrimaryText: { color: "white", fontWeight: "800" },//primary button text
-
-  btnSecondary: { backgroundColor: "#1f1f2a", borderWidth: 1, borderColor: "#2b2b3b", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // secondary button
-  btnSecondaryText: { color: "white", fontWeight: "700" }, //secondary button text
-
-  btnDanger: { backgroundColor: "#2a1214", borderWidth: 1, borderColor: "#4b1c21", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // destructive button
-  btnDangerText: { color: "#ffb4bc", fontWeight: "800" },//delete buttons so it stands out
-
-  badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status chip (completed/pending etc)
-
-  editPanel: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#12121c", borderWidth: 1, borderColor: "#2a2a40", gap: 6 }, // inline edit box
-  editLabel: { color: "#a9a9b6", fontSize: 12, fontWeight: "600" },//edit label
-  editInput: { backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 10, padding: 10, color: "white", fontSize: 14 }, // inline edit input
-
-
+  safe: {
+    flex: 1,
+    backgroundColor: "#0b0b0f",
+  },
+  container: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 14,
+  },
 });
 
-const gradeStyles = StyleSheet.create({
-
-  container: {marginTop: 12,padding: 12,borderRadius: 12,backgroundColor: "#0a0a12",borderWidth: 1,
-  borderColor: "#2a2a40", gap: 8,},
-
-  heading: {color: "#d6d6df",fontWeight: "700",fontSize: 13,},
-
-  barTrack: { flexDirection: "row", height: 8, borderRadius: 99, overflow: "hidden", backgroundColor: "#1f1f30",},
-  barFill: { backgroundColor: "#3B82F6", borderRadius: 99,},
-  barLabel: { color: "#a9a9b6", fontSize: 11,},
-
-  rangeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", marginTop: 4,},
-  rangeBox: {alignItems: "center",flex: 1,},
-  rangeValue: { color: "white", fontSize: 22, fontWeight: "800",},
-  rangeLabel: {fontSize: 12, fontWeight: "700", marginTop: 2,},
-
-  rangeHint: {color: "#a9a9b6", fontSize: 10, textAlign: "center", marginTop: 2,},
-  rangeSep: {color: "#a9a9b6", fontSize: 18, paddingHorizontal: 8,},
-  hint: {color: "#a9a9b6", fontSize: 11,},
-
-});
