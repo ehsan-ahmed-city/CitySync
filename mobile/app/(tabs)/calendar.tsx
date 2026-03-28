@@ -252,6 +252,30 @@ export default function CalendarScreen() {
     try {
       const USER_ID = await getUserId();
 
+      const prefsRes = await fetch(`${API_BASE}/users/${USER_ID}/preferences`, {
+        headers: await authHeaders(),//fetching user perfs and using authtoken to allow it
+      });
+
+      let currentBuffer = 10;
+      let currentHome = "";
+      let currentDest = CityCampDest;
+      //temp prefs in case api fails^
+
+      if (prefsRes.ok) {
+        const prefs = (await prefsRes.json()) as UserPrefDto;
+        ///response to uderpref dto using await for async prarse
+
+        currentBuffer = prefs.bufferMins ?? 10;
+        currentHome = prefs.homeAddress ?? "";
+        currentDest = prefs.UniLoc?.trim() || CityCampDest;
+        //prefs are used if exists else default vals
+
+        setBuffer(currentBuffer);
+        setHomeLocationState(currentHome);
+        setDestination(currentDest);
+        //react state updates for ui
+      }
+
       const perm = await Calendar.requestCalendarPermissionsAsync();
       if (perm.status !== "granted") {
         Alert.alert("Calendar permission needed", "Enable calendar permission to import timetable events.");
@@ -296,7 +320,8 @@ export default function CalendarScreen() {
       //fetch all events within the week range
       const deviceEvents = await Calendar.getEventsAsync(calIds, weekStart, weekEnd);
 
-      const bufferMins = buffer;
+      const bufferMins = currentBuffer;
+      //from the backend
 
 
       //cancel old leave alerts before we schedule new ones
@@ -339,8 +364,8 @@ export default function CalendarScreen() {
           //fixed destination so travel should be Home to City campus
           const eventArrivalTime =start.toISOString();
 
-          const liveTravelMins = await fetchTravelMins(homeLocation,destination, eventArrivalTime);
-          const travelMins = liveTravelMins ?? estimateMinsHomeUnifb(homeLocation);
+          const liveTravelMins = await fetchTravelMins(currentHome,currentDest, eventArrivalTime);
+          const travelMins = liveTravelMins ?? estimateMinsHomeUnifb(currentHome);
 
           if (travelMins != null) {
             const leaveAt = calcLeaveTime(start, travelMins, bufferMins);
@@ -354,7 +379,7 @@ export default function CalendarScreen() {
             leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
             const usedFallback = liveTravelMins == null;
-            routeMeta = `Route: Home -> ${destination} (${travelMins} mins${usedFallback ? " est." : ""})`;
+            routeMeta = `Route: Home -> ${currentDest} (${travelMins} mins${usedFallback ? " est." : ""})`;
           } else {
 
             routeMeta = "Set home address in preferences to get leave time";
