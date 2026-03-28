@@ -40,7 +40,7 @@ public class UserPrefService {
         User user = userRepository.findById(userId)//checks if user exists
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        UserPref prefs = prefsRepository.findById(userId).orElse(new UserPref(user));
+        UserPref prefs = prefsRepository.findById(userId).orElseGet(() -> new UserPref(user));
         //^loads the prefs or creates new row bound to user
 
         prefs.setHomeAddress(trimToNull(dto.homeAddress()));

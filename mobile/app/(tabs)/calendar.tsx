@@ -3,13 +3,12 @@ import { Alert, Button, SafeAreaView, SectionList, Text, TextInput, View } from 
 import * as Calendar from "expo-calendar";
 import * as Notifications from "expo-notifications";
 
-import { getLeaveBufferMins, setLeaveBufferMins } from "../../lib/leavePrefs";
-import { getHomeLocation, setHomeLocation } from "../../lib/locationPrefs";
+
 import { getSelectedCalendarIds } from "@/lib/calendarPrefs";
 import { getUserId, authHeaders, API_BASE } from "@/lib/api";
 
 
-const CITY_CAMPUS_DESTINATION = "City, University of London, Northampton Square, London EC1V 0HB";
+const CityCampDest = "City, University of London, Northampton Square, London EC1V 0HB";
 
 //stores leave notification ids so we can cancel them on reload
 const leavenotif = "citysync.leaveSoonNotifIds.v1";
@@ -41,6 +40,13 @@ type UnifiedItem = {
   meta?: string;
 };
 
+type UserPrefDto ={
+    homeAddress: string | null;
+    UniLoc: string | null;
+    bufferMins: number | null;
+    //same json user preferences for home loc, uni loc and time buffer for backend
+}
+
 function startOfWeek(d: Date) {
   //monday-start week
   const x = new Date(d);
@@ -71,7 +77,7 @@ function parseDueDateTyp(yyyyMmDd: string) {
   return dt;
 }
 
-async function fetchTravelMins(home: string, arrivalTime?: string): Promise<number | null> {
+async function fetchTravelMins(home: string, destination: string, arrivalTime?: string): Promise<number | null> {
   //calls backend /travel which proxies to google routes and returns seconds + fallback flag
   if (!home || home.trim() === "") return null;
 
@@ -80,7 +86,7 @@ async function fetchTravelMins(home: string, arrivalTime?: string): Promise<numb
     const url =
       `${API_BASE}/travel` +
       `?origin=${encodeURIComponent(home.trim())}` + //encode so spaces/postcodes work in a URL
-      `&destination=${encodeURIComponent(CITY_CAMPUS_DESTINATION)}`+
+      `&destination=${encodeURIComponent(destination)}`+//spaces in location/postcode don't break url
       (arrivalTime ? `&arrivalTime=${encodeURIComponent(arrivalTime)}`:"");
 
     const res = await fetch(url, {
@@ -158,23 +164,6 @@ async function scheduleLeaveSoonNotif(
 
   try {
 
-    // const perms = await Notifications.getPermissionsAsync();
-    // let granted =
-    //   perms.granted ||
-    //   perms.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
-    //
-    // if (!granted) {
-    //   const req = await Notifications.requestPermissionsAsync();
-    //   granted =
-    //     req.granted ||
-    //     req.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
-    // }
-    //
-    // if (!granted) {
-    //   console.log(`[CitySync] Notifications not permitted for "${eventTitle}"`);
-    //   return null;
-    // }
-
     let perms = await Notifications.getPermissionsAsync();
 
     if (!perms.granted) {
@@ -223,26 +212,40 @@ export default function CalendarScreen() {
 
   const [buffer, setBuffer] = useState<number>(10);
   const [homeLocation, setHomeLocationState] = useState<string>("");
+  const [destination, setDestination] = useState<string>(CityCampDest);
+  //default destination city camppus but can be changed in prefs
+
+  const [prefsLoaded, setPrefsLoaded] = useState(false);//stops calendar form loading until prefs are ready
 
 //   const [travelSource, setTravelSource] = useState<"google" | "fallback" | "none">("none");
   useEffect(() => {
-    (async () => {
-      setBuffer(await getLeaveBufferMins());
-      setHomeLocationState(await getHomeLocation());
+  (async () => {
+  //wrapped async for errors
+    try{
+        const USER_ID = await getUserId();//gets user id when logged in to fetch pref
+
+        const res = await fetch(`${API_BASE}/users/${USER_ID}/preferences`,{
+            headers: await authHeaders(),
+            //calls backend and gets the jwt
+        });
+        if (!res.ok){ return;}//skips if req fails
+
+        const prefs = (await res.json()) as UserPrefDto;
+        //prefs ack to ts object form json
+
+        setBuffer(prefs.bufferMins ?? 10);//if no val from backend then 10 default
+        setHomeLocationState(prefs.homeAddress ?? "");
+        //^no leave time notif if home address not set
+        setDestination(prefs.UniLoc?.trim() || CityCampDest);//use destination if present but uni campus as fallback
+    } catch{
+        //default if pref loading fails
+    } finally{
+      setPrefsLoaded(true);
+      //lets unified calendar load
+    }
     })();
   }, []);
 
-  async function saveBuffer(next: number) {
-    setBuffer(next);
-    await setLeaveBufferMins(next);
-    Alert.alert("Saved", `Leave buffer set to ${next} minutes`);
-    loadUnifiedWeek(); // refreshs the leaveat time
-  }
-
-  async function saveHomeLocation(next: string) {
-    setHomeLocationState(next);
-    await setHomeLocation(next);
-  }
 
   async function loadUnifiedWeek() {
     setStatus("requesting calendar permission...");
@@ -336,7 +339,7 @@ export default function CalendarScreen() {
           //fixed destination so travel should be Home to City campus
           const eventArrivalTime =start.toISOString();
 
-          const liveTravelMins = await fetchTravelMins(homeLocation, eventArrivalTime);
+          const liveTravelMins = await fetchTravelMins(homeLocation,destination, eventArrivalTime);
           const travelMins = liveTravelMins ?? estimateMinsHomeUnifb(homeLocation);
 
           if (travelMins != null) {
@@ -351,10 +354,10 @@ export default function CalendarScreen() {
             leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
             const usedFallback = liveTravelMins == null;
-            routeMeta = `Route: Home -> City campus (${travelMins} mins${usedFallback ? " est." : ""})`;
+            routeMeta = `Route: Home -> ${destination} (${travelMins} mins${usedFallback ? " est." : ""})`;
           } else {
 
-            routeMeta = "Set home address in settings to get leave time";
+            routeMeta = "Set home address in preferences to get leave time";
           }
 
           // const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
@@ -452,78 +455,25 @@ export default function CalendarScreen() {
   }
 
   useEffect(() => {
+  if (!prefsLoaded) return;
     loadUnifiedWeek();
-  }, []);
+  }, [prefsLoaded]);
 
   return (
-    // <SafeAreaView style={{ flex: 1 }}>
     <SafeAreaView style={{ flex: 1, backgroundColor: "#0b0b0f" }}>
       <View style={{ padding: 16, gap: 8 }}>
         <Text style={{ fontSize: 20, fontWeight: "600", color: "white" }}>Unified Week</Text>
         <Text style={{ color: "#d6d6df" }}>Week: {ymd(weekStart)} to {ymd(addDays(weekStart, 6))}</Text>
         <Text style={{ color: "#d6d6df" }}>Status: {status}</Text>
 
-
-
         <Button title="Reload unified week" onPress={loadUnifiedWeek} />
-
-        {/*
-        <Button
-          title="Test Notification (5s)"
-          onPress={async () => {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: "TEST",
-                body: "should fire in 5 secs",
-              },
-              trigger: {
-                type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-                seconds: 5,
-              },
-            });
-          }}
-        />
-        */}
-      </View>
-
-      <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 16, fontWeight: "700", color: "white" }}>Leave buffer</Text>
-        <Text style={{ color: "#d6d6df" }}>Current: {buffer} minutes</Text>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-
-          <Button title="-5" onPress={() => saveBuffer(Math.max(0, buffer - 5))} />
-          <Button title="+5" onPress={() => saveBuffer(buffer + 5)} />
-
-        </View>
-      </View>
-
-
-      <View style={{ padding: 16, gap: 8 }}>
-
-        <Text style={{ fontSize: 16, fontWeight: "700", color: "white" }}>Home location</Text>
-        <TextInput
-
-          value={homeLocation}
-          onChangeText={saveHomeLocation}
-          placeholder="e.g. LU48AY or full address"
-          placeholderTextColor="#777"
-          autoCapitalize="none"
-          style={{ borderWidth: 1, padding: 10, color: "white", borderColor: "#2a2a3a", backgroundColor: "#14141a" }}
-
-        />
-        <Text style={{ opacity: 0.7, color: "#a9a9b6" }}>
-          Destination: City Uni of London campus
-        </Text>
-
       </View>
 
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.key}
         renderSectionHeader={({ section }) => (
-          // <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#eee" }}>
           <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#14141a" }}>
-            {/* <Text style={{ fontWeight: "700" }}>{section.title}</Text> */}
             <Text style={{ fontWeight: "700", color: "white" }}>{section.title}</Text>
           </View>
         )}
@@ -540,18 +490,17 @@ export default function CalendarScreen() {
                 borderBottomColor: "#262638",opacity: past ? 0.45 : 1,
               }}
             >
-              {/* <Text style={{ fontWeight: "600" }}> */}
+
               <Text style={{ fontWeight: "600", color: past ? "#7f7f8f" : "white" }}>
                 [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
               </Text>
 
-              {/* <Text> */}
               <Text style={{ color: past ? "#7f7f8f" : "#d6d6df" }}>
                 {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
                 {item.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </Text>
 
-              {/* {item.location ? <Text>Location: {item.location}</Text> : null} */}
+
               {item.location ? (
                 <Text style={{ color: past ? "#6d6d7c" : "#a9a9b6" }}>
                   Location: {item.location}

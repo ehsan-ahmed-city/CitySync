@@ -32,7 +32,6 @@ public class UserPref {
     public UserPref(User user) {
 
         this.user = user;
-        this.userId = user.getId();
         this.updatedAt = Instant.now();
         //links row to user and ensures key matchs
     }
