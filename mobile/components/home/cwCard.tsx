@@ -55,7 +55,7 @@ type Props = {
   showEditTP: boolean;
   setEditTP: (value: boolean) => void;
 
-  updateCoursework: (item: CourseworkDto) => Promis<void>;//saves edit
+  updateCoursework: (item: CourseworkDto) => Promise<void>;//saves edit
   setCourseworkCompleted: (item: CourseworkDto, completed: boolean) => Promise<void>;
   startEditingCw: (item: CourseworkDto) => void;
   cancelEditing: () => void;

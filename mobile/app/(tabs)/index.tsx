@@ -30,13 +30,13 @@ export default function HomeScreen() {
   const [userId, setUserId] = useState<number | null>(null);
 
   //module form
-  const [mCode, setMCode] = useState("IN3007");
-  const [mName, setMName] = useState("Individual Project");
-  const [mCredits, setMCredits] = useState("45");
+  const [mCode, setMCode] = useState("IN3000");
+  const [mName, setMName] = useState("Module Name");
+  const [mCredits, setMCredits] = useState("15");
 
   //coursework form
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
-  const [cwTitle, setCwTitle] = useState("PDD submission");
+  const [cwTitle, setCwTitle] = useState("Coursework part 1");
   const [cwDueDateObj, setCwDueDateObj] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -573,6 +573,11 @@ export default function HomeScreen() {
             setCourseworkCompleted={setCourseworkCompleted}
             startEditingCw={startEditingCw}
             deleteCw = {deleteCw}
+            cancelEditing={() => setEditingCwId(null)}
+            showEditDP={showEditDP}
+            showEditTP={showEditTP}
+            setEditTP={setEditTP}
+            setEditDP={setEditDP}
           />
 
         </ScrollView>
