@@ -9,6 +9,7 @@ import GradeCard from "@/components/home/GradeCard";
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet,} from "react-native";
 import ModuleCard from "@/components/home/ModuleCard";
 import CwCard from "@/components/home/CwCard";
+import { getModuleWeightTotal, formatDate, } from "@/lib/CwHelpers"
 
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
@@ -459,6 +460,37 @@ export default function HomeScreen() {
 
   }
 
+ async function deleteCw(item: CourseworkDto){
+    setStatus("deleteing coursework..");
+    try{
+        const USER_ID = await getUserId();//gets user id
+        const res = await fetch (
+        `${API_BASE}/users/${USER_ID}/modules/${item.moduleId}/coursework/${item.id}`,
+            {//delete req to backend with auth token added
+                method: "DELETE",
+                headers: await authHeaders(),
+            }
+        );
+
+        if(!res.ok){
+            const txt = await res.text();
+            setStatus(`delete coursewrok failed ${res.status}` );
+            Alert.alert("Delete coursework failed", `${res.status}\n${txt}`);
+            return;//stops executing if error returned
+        }
+
+        await cancelCourseworkReminders(item.id); //removes reminders for cw deleted
+        setStatus(`deleted coursework ${item.id}`);
+        await loadCoursework();
+        //ui updates and cw lisr reloaded
+
+        } catch (e: any){//for network erros /crashes
+            setStatus("delete cw error");
+            Alert.alert("Delete cw error",String(e?.message ?? e));
+        }
+
+ }
+
   function startEditingCw(item: CourseworkDto) {//opens edit panel and fills current coursework vals
 
     setEditingCwId(item.id);
@@ -540,6 +572,7 @@ export default function HomeScreen() {
             updateCoursework={updateCoursework}
             setCourseworkCompleted={setCourseworkCompleted}
             startEditingCw={startEditingCw}
+            deleteCw = {deleteCw}
           />
 
         </ScrollView>

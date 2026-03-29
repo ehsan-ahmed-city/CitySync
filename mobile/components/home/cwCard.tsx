@@ -1,8 +1,8 @@
 import React from "react";
-import {View,Text, TextInput, FlatList, Pressable, StyleSheet,} from "react-native";
+import {View,Text, TextInput, FlatList, Pressable, StyleSheet, Alert} from "react-native";
 import {Picker} from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { PrimBtn, SecBtn } from "@/components/home/ActionBtns";
+import { PrimBtn, SecBtn, DangerBtn } from "@/components/home/ActionBtns";
 import type { CourseworkDto } from "@/lib/CwHelpers";
 import { formatDate, formatTime, daysUntil, getReminderLevel } from "@/lib/CwHelpers";
 
@@ -60,6 +60,8 @@ type Props = {
   startEditingCw: (item: CourseworkDto) => void;
   cancelEditing: () => void;
   //^entering and exiting edit mode
+
+  deleteCw : (item: CourseworkDto) => void;
 };
 
 export default function CwCard({ //recieved all state and handles from index
@@ -79,7 +81,7 @@ export default function CwCard({ //recieved all state and handles from index
   setEditScorePercent,showEditDP,setEditDP,
   showEditTP,setEditTP,updateCoursework,
   setCourseworkCompleted,startEditingCw,
-  cancelEditing,
+  cancelEditing,deleteCw,
   //toggle complete, save edit, start/cancel editing
 }:Props){
     return (
@@ -319,6 +321,20 @@ export default function CwCard({ //recieved all state and handles from index
                           onPress={() => startEditingCw(item)}
                         />
                       ) : null}
+
+                      <DangerBtn
+                        title="Delete"
+                        onPress={() =>
+                          Alert.alert(
+                            "Delete coursework?",
+                            "This coursework will be deleted",
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              { text: "Delete", style: "destructive", onPress: () => deleteCw(item) },
+                            ]
+                          )
+                        }
+                      />
                     </View>
                   </View>
                 );}}
