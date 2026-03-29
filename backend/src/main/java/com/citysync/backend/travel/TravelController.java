@@ -36,6 +36,30 @@ public class TravelController {
 
         return ResponseEntity.ok(new TravelResponse(seconds, fallback));
     }
+
+    @GetMapping("/details")
+    public ResponseEntity<> getTravelDetails(
+
+        @RequestParam String origin,
+        @RequestParam String destination,
+        //^start and end location
+
+        @RequestParam(required = false) String arrivalTime//arrival time optional
+    ){
+
+        if(origin == null || origin.isBlank() || destination == null || destination.isBlank()){
+            //^validation so no bad reqs are sent
+            return ResponseEntity.badRequest().build();
+        }
+
+        travelDeets details = travelService.getRouteDetails( origin.trim(), destination.trim(), arrivalTime);
+        //service layer
+
+        return ResponseEntity.ok(details);
+        //json returned to frontend
+    }
+
+
 }
 
 //dto where seconds is travel time and fallback=true means the API failed :(
