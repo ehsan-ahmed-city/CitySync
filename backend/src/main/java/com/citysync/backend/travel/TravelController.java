@@ -38,7 +38,7 @@ public class TravelController {
     }
 
     @GetMapping("/details")
-    public ResponseEntity<> getTravelDetails(
+    public ResponseEntity<travelDeets> getTravelDetails(
 
         @RequestParam String origin,
         @RequestParam String destination,
@@ -52,7 +52,7 @@ public class TravelController {
             return ResponseEntity.badRequest().build();
         }
 
-        travelDeets details = travelService.getRouteDetails( origin.trim(), destination.trim(), arrivalTime);
+        travelDeets details = travelService.getTravelDetails( origin.trim(), destination.trim(), arrivalTime);
         //service layer
 
         return ResponseEntity.ok(details);

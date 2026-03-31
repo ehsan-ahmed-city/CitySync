@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, SafeAreaView, SectionList, Text, TextInput, View } from "react-native";
+import { Alert, Button, SafeAreaView, SectionList, Text, TextInput, View, Modal, Pressable,ScrollView } from "react-native";
 import * as Calendar from "expo-calendar";
 import * as Notifications from "expo-notifications";
 
@@ -46,6 +46,13 @@ type UserPrefDto ={
     bufferMins: number | null;
     //same json user preferences for home loc, uni loc and time buffer for backend
 }
+
+type routeStepDto = {mode: string; instruction: string; durationSecs: number | null; departureStop: string | null;
+arrivalStop: string | null; lineName: string | null; vehicleType: string | null; headSign
+};//one step in jounrey
+
+type travelDeets = {fallback: boolean; durationSecs: seconds | null; summary: string | null; steps: routeStepDto[];};
+//full journey from backend
 
 function startOfWeek(d: Date) {
   //monday-start week
@@ -103,6 +110,40 @@ async function fetchTravelMins(home: string, destination: string, arrivalTime?: 
   } catch {
 
     return null;
+  }
+}
+
+async function fetchTravelDetails(
+//calls backend to get full route details
+  home: string,
+  destination: string,
+  arrivalTime?: string
+): Promise<TravelDeets | null> {
+  if (!home || home.trim() === "") return null;//can't compute route if no home address
+
+  try {//url qith query params
+    const url =
+      `${API_BASE}/travel/details` +
+      `?origin=${encodeURIComponent(home.trim())}` +//encode because url break gave me error
+      `&destination=${encodeURIComponent(destination)}` +
+      (arrivalTime ? `&arrivalTime=${encodeURIComponent(arrivalTime)}` : "");
+
+    const res = await fetch(url, {
+    //call backend with auth headers
+      headers: await authHeaders(),
+    });
+
+    if (!res.ok) return null;//null if reqfails
+
+    const json = (await res.json()) as TravelDeets;//json parsed
+
+    if (json.fallback) return null;
+    //null if no real route way
+
+    return json;
+  } catch {
+    return null;
+    //any other errors like netwrok
   }
 }
 
@@ -217,7 +258,13 @@ export default function CalendarScreen() {
 
   const [prefsLoaded, setPrefsLoaded] = useState(false);//stops calendar form loading until prefs are ready
 
-//   const [travelSource, setTravelSource] = useState<"google" | "fallback" | "none">("none");
+  const[routeModalVisible, setRouteModalVisible] = useState(false);//toggling route modal screen
+  const[routeLoading, setRouteLoading] = useState(false);//show loading state while fetching route
+
+  const[selectedRoute,setSelectedRoute] = useState<travelDeets | null>(null);
+  const[selectedRouteTitle,setSelectedRouteTitle] = useState("");
+  //stores sleected route and event title
+
   useEffect(() => {
   (async () => {
   //wrapped async for errors
@@ -246,6 +293,41 @@ export default function CalendarScreen() {
     })();
   }, []);
 
+  async function openRouteDetails(item: UnifiedItem) {//activates when user taps the route detail button
+    if (item.source !== "timetable") return;//only timetable items have routes
+
+    if (!homeLocation || homeLocation.trim() === "") {
+      Alert.alert("No home address", "set your home address in prefs first");
+      //they gte an alert is home address isn't set
+      return;
+    }
+
+    try {
+      setRouteLoading(true);
+      setSelectedRoute(null);
+      setSelectedRouteTitle(item.title);//store evnt title for display
+      setRouteModalVisible(true);//opens route modal screen
+
+      const details = await fetchTravelDetails(//func to fetch route details form backend
+        homeLocation,
+        destination,
+        item.start.toISOString()
+      );
+
+      if (!details) {//if no data was returned
+        setSelectedRoute(null);
+        Alert.alert("Route details unavailable", "Could not load detailed route steps");
+        return;
+      }
+
+      setSelectedRoute(details);
+    } catch (e: any) {
+      Alert.alert("Route details error", String(e?.message ?? e));
+      setRouteModalVisible(false);//closes modal screen if error
+    } finally {
+      setRouteLoading(false);
+    }
+  }
 
   async function loadUnifiedWeek() {
     setStatus("requesting calendar permission...");
@@ -327,15 +409,6 @@ export default function CalendarScreen() {
       //cancel old leave alerts before we schedule new ones
       await cancelAllLeaveSoonNotifs();
 
-      //ask notif perms if needed (so leave alerts can actually fire)
-      // const notifPerm = await Notifications.getPermissionsAsync();
-      // const canNotify =
-      //   notifPerm.granted || notifPerm.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
-      //
-      // if (!canNotify) {
-      //
-      //   await Notifications.requestPermissionsAsync();
-      // }
 
       let perms = await Notifications.getPermissionsAsync();
 
@@ -548,12 +621,108 @@ export default function CalendarScreen() {
                   ))}
                 </>
               ) : null}
+
+              //only shows button for future timetable evnts
+              {item.source === "timetable" && !past ?(
+                <Pressable
+                    onPress={() => openRouteDetails(item)}
+                    style={{marginTop: 8 }}
+                >
+                 <Text style={{ color:"#9bc2f2", fontSize: 13}}>
+                    Show route details
+                 </Text>
+                </Pressable>
+              ):null}
             </View>
 
           );
         }}
-        ListEmptyComponent={<Text style={{ padding: 16, color: "#d6d6df" }}>No items this week.</Text>}
+        ListEmptyComponent={<Text style={{ padding: 16, color: "#d6d6df" }}>No items this week</Text>}
       />
+            <Modal
+              visible={routeModalVisible}
+              animationType="slide"
+              transparent={false}
+              onRequestClose={() => {
+                setRouteModalVisible(false);
+                setSelectedRoute(null);
+              }}
+            >
+              <SafeAreaView style={{ flex: 1, backgroundColor: "#0b0b0f" }}>
+                <View style={{ padding: 16 }}>
+                  <Text style={{ fontSize: 20, fontWeight: "600", color: "white" }}>
+                    Route details
+                  </Text>
+
+                  <Text style={{ color: "#d6d6df", marginTop: 6 }}>
+                    {selectedRouteTitle}
+                  </Text>
+
+                  {routeLoading ? (
+                    <Text style={{ color: "#d6d6df", marginTop: 16 }}>Loading route...</Text>
+                  ) : selectedRoute ? (
+                    <>
+                      {selectedRoute.summary ? (
+                        <Text style={{ color: "#d6d6df", marginTop: 16, marginBottom: 12 }}>
+                          {selectedRoute.summary}
+                        </Text>
+                      ) : null}
+                      {selectedRoute.durationSeconds != null ? (
+                        <Text style={{ color: "#a9a9b6", marginBottom: 12 }}>
+                          Total travel time: {Math.ceil(selectedRoute.durationSeconds / 60)} mins
+                        </Text>
+                      ) : null}
+
+                      <ScrollView style={{ maxHeight: 500 }}>
+                        {selectedRoute.steps.map((step, i) => (
+                          <View
+                            key={i}
+                            style={{
+                              paddingVertical: 12,
+                              borderBottomWidth: 1,
+                              borderBottomColor: "#262638",
+                            }}
+                          >
+                            <Text style={{ color: "white", fontWeight: "600" }}>
+                              {i + 1}. {step.instruction}
+                            </Text>
+                            {step.durationSeconds != null ? (
+                              <Text style={{ color: "#a9a9b6", marginTop: 4 }}>
+                                Duration: {Math.ceil(step.durationSeconds / 60)} mins
+                              </Text>
+                            ) : null}
+
+                            {step.lineName ? (<Text style={{ color: "#a9a9b6" }}>Line: {step.lineName}</Text>) : null}
+
+                            {step.vehicleType ? (<Text style={{ color: "#a9a9b6" }}>Vehicle: {step.vehicleType}</Text> ) : null}
+
+                            {step.departureStop ? (<Text style={{ color: "#a9a9b6" }}>From: {step.departureStop}</Text> ) : null}
+
+                            {step.arrivalStop ? (<Text style={{ color: "#a9a9b6" }}>To: {step.arrivalStop}</Text>) : null}
+
+                            {step.headSign ? (<Text style={{ color: "#a9a9b6" }}>Direction: {step.headSign}</Text>) : null}
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </>
+                  ) : (
+                    <Text style={{ color: "#d6d6df", marginTop: 16 }}>
+                      No route details loadde
+                    </Text>
+                  )}
+
+                  <Pressable
+                    onPress={() => {
+                      setRouteModalVisible(false);
+                      setSelectedRoute(null);
+                    }}
+                    style={{ marginTop: 16 }}
+                  >
+                    <Text style={{ color: "#60A5FA", fontSize: 16 }}>Close</Text>
+                  </Pressable>
+                </View>
+              </SafeAreaView>
+            </Modal>
     </SafeAreaView>
   );
 }
