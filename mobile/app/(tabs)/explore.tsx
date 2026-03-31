@@ -158,6 +158,22 @@ export default function SettingsScreen() {
     }
   }
 
+  function confSavePrefs(){
+  //function to show a pop up so users know that their location will be saved
+    Alert.alert(
+    "Use saved location details?",
+    "CitySync will use your saved location for travel time esitmates and generating leave-soon alerts",[
+    { text: "Cancel",style: "cancel",},
+    {
+        text: "Continue",
+        onPress: () => { savePrefs().catch((e) => Alert.alert("Save error",String(e?.message ?? e)));
+        //gets saved
+        },
+    },
+    ]
+    );
+  }
+
   function adjustBuffer(delta: number) {
     const current = parseInt(bufferMins, 10) || 0;
     const next = Math.max(0, Math.min(300, current + delta));
@@ -183,7 +199,9 @@ export default function SettingsScreen() {
 
           {/*Travel settings */}
           <SectionCard title="Travel Settings">
-
+            <Text>
+                Citysync uses your saved location details to calculate travel timea and generate leave-soon alerts.
+            </Text>
             <FieldLabel label="Home address or postcode" />
 
             <TextInput
@@ -273,7 +291,7 @@ export default function SettingsScreen() {
           </SectionCard>
 
           {/*Save button */}
-          <PrimBtn title="Save Preferences" onPress={savePrefs} disabled={status.type === "loading"} />
+          <PrimBtn title="Save Preferences" onPress={confSavePrefs} disabled={status.type === "loading"} />
 
           <View style={{ height: 40 }} />
         </ScrollView>

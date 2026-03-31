@@ -132,7 +132,21 @@ export default function CalendarSettingsScreen() {
     }
 
     await setSelectedCalendarIds(ids);
-    Alert.alert("Saved", `Selected ${ids.length} calendar(s).`);
+    Alert.alert("Saved", `Citysync will use ${ids.length} selected calendar(s) for your unified timetable :D`);
+  }
+
+  function confirmSave(){
+  //funciton so that users know that their calendar perfs will be saved
+    Alert.alert(
+    "Use selected calendars?","Citysync reads events only form the calendars you selected to build the unified calendar",
+    [{text: "cancel",style:"cancel",},{
+        text:"continue", onPress: () => {
+            save().catch((e) => Alert.alert("save error", String(e)));
+        },
+    },
+
+    ]
+    );
   }
 
   async function reset() {
@@ -165,6 +179,10 @@ export default function CalendarSettingsScreen() {
 
           <Text style={{ color: colours.muted, marginTop: 6 }}>{status}</Text>
 
+          <Text style={{ color: colours.sub, marginTop:10, lineHeight: 20 }}>
+            Citysync reads events only form the calendars you selected to build the unified calendar
+          </Text>
+
           <View style={{ flexDirection: "row", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
 
             <Pill label={`Calendars: ${cals.length}`} />
@@ -174,7 +192,7 @@ export default function CalendarSettingsScreen() {
           <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
             <View style={{ flex: 1 }}>
 
-              <PrimaryButton title="Save selection" onPress={() => {save().catch((e) => Alert.alert("Save error", String(e)));}}/>
+              <PrimaryButton title="Save selection" onPress={confirmSave}/>
             </View>
             <View style={{ flex: 1 }}>
 

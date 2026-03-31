@@ -47,11 +47,13 @@ type UserPrefDto ={
     //same json user preferences for home loc, uni loc and time buffer for backend
 }
 
-type routeStepDto = {mode: string; instruction: string; durationSecs: number | null; departureStop: string | null;
-arrivalStop: string | null; lineName: string | null; vehicleType: string | null; headSign
+type routeStepDto = {
+    mode: string; instruction: string; durationSeconds: number | null;
+    departureStop: string | null; arrivalStop: string | null; lineName: string | null;
+    vehicleType: string | null; headSign: string | null;
 };//one step in jounrey
 
-type travelDeets = {fallback: boolean; durationSecs: seconds | null; summary: string | null; steps: routeStepDto[];};
+type travelDeets = {fallback: boolean; durationSeconds: number | null; summary: string | null; steps: routeStepDto[];};
 //full journey from backend
 
 function startOfWeek(d: Date) {
@@ -118,7 +120,7 @@ async function fetchTravelDetails(
   home: string,
   destination: string,
   arrivalTime?: string
-): Promise<TravelDeets | null> {
+): Promise<travelDeets | null> {
   if (!home || home.trim() === "") return null;//can't compute route if no home address
 
   try {//url qith query params
@@ -135,7 +137,7 @@ async function fetchTravelDetails(
 
     if (!res.ok) return null;//null if reqfails
 
-    const json = (await res.json()) as TravelDeets;//json parsed
+    const json = (await res.json()) as travelDeets;//json parsed
 
     if (json.fallback) return null;
     //null if no real route way
@@ -622,7 +624,7 @@ export default function CalendarScreen() {
                 </>
               ) : null}
 
-              //only shows button for future timetable evnts
+              {/*}only shows button for future timetable evnts*/}
               {item.source === "timetable" && !past ?(
                 <Pressable
                     onPress={() => openRouteDetails(item)}
