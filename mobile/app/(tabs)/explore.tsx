@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView,StyleSheet,
   Text, TextInput, View,} from "react-native";
 import { getUserId, authHeaders, API_BASE } from "@/lib/api";
+import {PrimBtn, DangerBtn} from "@/components/home/ActionBtns";
 
 
 const C = { bg: "#0B0B10", card: "#12121A", card2: "#161622", border: "rgba(255,255,255,0.08)",
@@ -14,30 +15,6 @@ type Prefs = { //from backend preferences
   bufferMins: number | null;
 };
 
-
-
-function PrimBtn({ title, onPress, disabled }: {title: string; onPress: () => void; disabled?: boolean }){
-//^primary action button
-  return (
-
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-
-      style={({ pressed }) => ({
-
-        backgroundColor: disabled ? C.muted : C.primary,
-        paddingVertical: 14,
-        borderRadius: 14,
-        alignItems: "center",
-        opacity: pressed ? 0.8 : 1,//opacity lower for feedback
-
-      })}
-    >
-      <Text style={{ color: C.text, fontWeight: "800", fontSize: 15 }}>{title}</Text>
-    </Pressable>
-  );
-}
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
 //card wrpper for each section
@@ -71,7 +48,8 @@ export default function SettingsScreen() {
     type: "idle",
   });
 
-
+const [deleteCode, setDeleteCode] = useState("");
+const [showDeleteCodeInput, setShowDeleteCodeInput] = useState(false);
 
   useEffect(() => {
     loadPrefs();  //load saved prefs from backend on mount
@@ -173,6 +151,101 @@ export default function SettingsScreen() {
     ]
     );
   }
+
+    function confirmDeleteStart() {
+      // first confirmation before sending the delete code
+      Alert.alert(
+        "Delete account?",
+        "This will remove your CitySync account and associated stored data. Do you want to continue?",
+        [{
+            text: "No nvm",
+            style: "cancel",
+          },
+          {
+            text: "Yes I'm sure",
+            style: "destructive",
+            onPress: () => {
+              requestDeleteCode().catch((e) =>
+                Alert.alert("Delete code error", String(e?.message ?? e))
+              );
+            },
+          },
+        ]
+      );
+    }
+
+    async function requestDeleteCode() {
+      //to delete verification code to logged-in user's email
+      const USER_ID = await getUserId();
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}/delete-account/request-code`, {
+        method: "POST",
+        headers: await authHeaders(),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? `fialed to request delete code (${res.status})`);
+      }
+
+      //reveal code input after email is sent successfully
+      setShowDeleteCodeInput(true);
+
+      Alert.alert("Code sent", "a delete verification code has been sent to your email");
+    }
+
+    function confirmDeleteFinal() {
+      // second/final confirmation before actual deletion
+      Alert.alert(
+        "Final confirmation",
+        "This action can't be undone, do you want your account and its stored data erased?",
+        [
+          {
+            text: "No!",
+            style: "cancel",
+          },
+          {
+            text: "Yes, delete account",
+            style: "destructive",
+            onPress: () => {
+              deleteAccount().catch((e) =>
+                Alert.alert("Delete error", String(e?.message ?? e))
+              );
+            },
+          },
+        ]
+      );
+    }
+
+    async function deleteAccount() {
+      if (!deleteCode.trim()) {
+        Alert.alert("Enter code", "Please enter the verification code sent to your email.");    //validates code input first
+        return;
+      }
+
+      const USER_ID = await getUserId();
+
+      const res = await fetch(`${API_BASE}/users/${USER_ID}`, {
+        method: "DELETE",
+        headers: {
+          ...(await authHeaders()),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: deleteCode.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? `Failed to delete account (${res.status})`);
+      }
+
+      Alert.alert("Account deleted", "Your CitySync account has been permanently removed.");
+
+    }
 
   function adjustBuffer(delta: number) {
     const current = parseInt(bufferMins, 10) || 0;
@@ -289,6 +362,36 @@ export default function SettingsScreen() {
               {"\nA push notification fires at exactly that time, even if the app is closed. Travel time is fetched live from Google Routes API. If unavailable, CitySync uses a static estimate based on your postcode."}
             </Text>
           </SectionCard>
+
+                    <SectionCard title="Account and data">
+                      <Text style={styles.sub}>
+                        Deleting your account will remove your CitySync account and stored data from the backend
+                      </Text>
+
+                      <DangerBtn title="Delete account" onPress={confirmDeleteStart} disabled={status.type === "loading"} />
+
+                      {showDeleteCodeInput ? (
+                        <>
+                          <FieldLabel label="Enter delete verification code" />
+
+                          <TextInput
+                            value={deleteCode}
+                            onChangeText={setDeleteCode}
+                            placeholder="Enter the code sent to your email"
+                            placeholderTextColor={C.muted}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            style={styles.input}
+                          />
+
+                          <Text style={styles.hint}>
+                            Enter the verification code sent to your email then confirm delete.
+                          </Text>
+
+                          <DangerBtn title="Confirm delete account" onPress={confirmDeleteFinal} disabled={status.type === "loading"}/>
+                        </>
+                      ) : null}
+                    </SectionCard>
 
           {/*Save button */}
           <PrimBtn title="Save Preferences" onPress={confSavePrefs} disabled={status.type === "loading"} />

@@ -5,6 +5,7 @@ import com.citysync.backend.user.UserRepo;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -21,8 +22,8 @@ public class AuthService {
     private final JavaMailSender mailSender;
 
     //sender address need match spring.mail.username in app properties
-    private static final String FROM_ADDRESS = "ehsanahmed828@gmail.com";
-    private static final int    CODE_EXPIRY_MINUTES = 10;
+    private static final String FromAddr = "kingehsan516@gmail.com";
+    private static final int CodeExprMins = 10;
 
     public AuthService(AuthCodeRepo codeRepo, UserRepo userRepo, JavaMailSender mailSender) {
         this.codeRepo   = codeRepo;
@@ -44,14 +45,15 @@ public class AuthService {
     }
 
     /**verifies the code,returns the userId on success else throws failure*/
+    @Transactional
     public long verifyCode(String email, String code) {
 
-        AuthCode ac = codeRepo.findEmailPurpose(email, purpLogin)
+        AuthCode ac = codeRepo.findByEmailAndPurpose(email, purpLogin)
                 .orElseThrow(() -> new IllegalArgumentException("No code requests for this email"));
 
         if (ac.getExpiresAt().isBefore(Instant.now())) {
 
-            codeRepo.deleteEmailPurp(email, purpLogin);
+            codeRepo.deleteByEmailAndPurpose(email, purpLogin);
             throw new IllegalArgumentException("Code expired.");
         }
 
@@ -63,7 +65,7 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found.")).getId();
 
         //clean up used code
-        codeRepo.deleteEmailPurp(email, purpLogin);
+        codeRepo.deleteByEmailAndPurpose(email, purpLogin);
 
         return userId;
     }
@@ -78,14 +80,15 @@ public class AuthService {
     }
 
     //verify delete account code
+    @Transactional
     public void deleteAccCode(String email, String code) {
 
-        AuthCode ac = codeRepo.findEmailPurpose(email, PurpDeleteAcc)
+        AuthCode ac = codeRepo.findByEmailAndPurpose(email, PurpDeleteAcc)
                 .orElseThrow(() -> new IllegalArgumentException("No delete code requested"));
 
         if (ac.getExpiresAt().isBefore(Instant.now())) {
 
-            codeRepo.deleteEmailPurp(email, PurpDeleteAcc);
+            codeRepo.deleteByEmailAndPurpose(email, PurpDeleteAcc);
             throw new IllegalArgumentException("Delete code expired! >:0");
         }
 
@@ -94,7 +97,7 @@ public class AuthService {
         }
 
         //clean up used code
-        codeRepo.deleteEmailPurp(email, PurpDeleteAcc);
+        codeRepo.deleteByEmailAndPurpose(email, PurpDeleteAcc);
     }
 
     //helper used by both login and delete-account flows
@@ -107,16 +110,14 @@ public class AuthService {
                 email,
                 purpose,
                 code,
-                Instant.now().plus(CODE_EXPIRY_MINUTES, ChronoUnit.MINUTES)
+                Instant.now().plus(CodeExprMins, ChronoUnit.MINUTES)
         ); //upsert replace any existing for this email+purpose
         codeRepo.save(ac);
 
-        //log console debug
-        System.out.printf("[CitySync Auth] Code for %s (%s) to %s%n", email, purpose, code);
 
         //send email
         SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setFrom(FROM_ADDRESS);
+        msg.setFrom(FromAddr);
         msg.setTo(email);
         msg.setSubject(subject);
         msg.setText(
@@ -124,11 +125,10 @@ public class AuthService {
                 "Hi!!,\n\n" +
                         "Your CitySync verification code is:\n\n" +
                         "    " + code + "\n\n" +
-                        "This code expires in " + CODE_EXPIRY_MINUTES + " minutes.\n\n" +
+                        "This code expires in " + CodeExprMins + " minutes.\n\n" +
                         "If you did not request this, please ignore this email.\n\n" +
                         "– CitySync"
         );
-//        System.out.println("[CitySync Auth] attempting to send email to: " + email); //for debug
         mailSender.send(msg);
     }
 }

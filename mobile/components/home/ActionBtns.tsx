@@ -2,11 +2,15 @@ import React from "react";
 import {Pressable, Text, StyleSheet} from "react-native";
 
 
-export function PrimBtn({ title, onPress }: { title: string; onPress: () => void }){
+export function PrimBtn({ title, onPress, disabled }: { title: string; onPress: () => void; disabled?: boolean }){
        //primary action button in app
          return (//reduces opacity when pressed
 
-           <Pressable onPress={onPress} style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.85 }]}>
+           <Pressable
+             onPress={onPress}
+             disabled={disabled}
+             style={({ pressed }) => [styles.btnPrimary, disabled && styles.btnDisabled, pressed && !disabled && { opacity: 0.85 }]}
+           >
 
              <Text style={styles.btnPrimaryText}>{title}</Text>
            </Pressable>
@@ -14,11 +18,15 @@ export function PrimBtn({ title, onPress }: { title: string; onPress: () => void
          );
        }
 
-export function SecBtn({ title, onPress }: { title: string; onPress: () => void }){
+export function SecBtn({ title, onPress, disabled }: { title: string; onPress: () => void; disabled?: boolean }){
 //secondary button as neutral
   return (
 
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.btnSecondary, pressed && { opacity: 0.85 }]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [styles.btnSecondary, disabled && styles.btnDisabled, pressed && !disabled && { opacity: 0.85 }]}
+    >
 
       <Text style={styles.btnSecondaryText}>{title}</Text>
     </Pressable>
@@ -26,10 +34,14 @@ export function SecBtn({ title, onPress }: { title: string; onPress: () => void 
   );
 }
 
-export function DangerBtn({ title, onPress }: { title: string; onPress: () => void }){
+export function DangerBtn({ title, onPress, disabled }: { title: string; onPress: () => void; disabled?: boolean }){
 //for stuff like delete
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.btnDanger, pressed && { opacity: 0.85 }]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [styles.btnDanger, disabled && styles.btnDisabled, pressed && !disabled && { opacity: 0.85 }]}
+    >
 
       <Text style={styles.btnDangerText}>{title}</Text>
 
@@ -46,4 +58,6 @@ const styles = StyleSheet.create({
 
   btnDanger: { backgroundColor: "#2a1214", borderWidth: 1, borderColor: "#4b1c21", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // destructive button
   btnDangerText: { color: "#ffb4bc", fontWeight: "800" },//delete buttons so it stands out
+
+  btnDisabled: { opacity: 0.5 },
 });
