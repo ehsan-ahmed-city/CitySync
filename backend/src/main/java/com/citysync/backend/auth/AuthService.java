@@ -6,7 +6,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,8 +21,9 @@ public class AuthService {
     private final UserRepo      userRepo;
     private final JavaMailSender mailSender;
 
-    //sender address need match spring.mail.username in app properties
-    private static final String FromAddr = "kingehsan516@gmail.com";
+    @Value("${spring.mail.username}")
+    private String fromAddr;
+    //to inject sender email form app properties for email verif from spring config
     private static final int CodeExprMins = 10;
 
     public AuthService(AuthCodeRepo codeRepo, UserRepo userRepo, JavaMailSender mailSender) {
@@ -117,7 +118,7 @@ public class AuthService {
 
         //send email
         SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setFrom(FromAddr);
+        msg.setFrom(fromAddr);
         msg.setTo(email);
         msg.setSubject(subject);
         msg.setText(
