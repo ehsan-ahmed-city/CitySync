@@ -112,12 +112,9 @@ export default function LoginScreen({ onLogin }: Props) {
                 disabled={loading}
               >
                 {loading ? (
-
                   <ActivityIndicator color="white" />
                 ) : (
-
                   <Text style={s.btnText}>Send Code</Text>
-
                 )}
               </Pressable>
             </View>

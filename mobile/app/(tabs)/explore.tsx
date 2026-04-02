@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView,StyleSheet,
   Text, TextInput, View,} from "react-native";
-import { getUserId, authHeaders, API_BASE } from "@/lib/api";
+import { getUserId, authHeaders, API_BASE, delUserId } from "@/lib/api";
 import {PrimBtn, DangerBtn} from "@/components/home/ActionBtns";
-
+import {useAuth} from "@/hooks/useAuth";
 
 const C = { bg: "#0B0B10", card: "#12121A", card2: "#161622", border: "rgba(255,255,255,0.08)",
   text: "#FFFFFF", sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#3B82F6",
@@ -50,6 +50,8 @@ export default function SettingsScreen() {
 
 const [deleteCode, setDeleteCode] = useState("");
 const [showDeleteCodeInput, setShowDeleteCodeInput] = useState(false);
+
+const {logout} = useAuth();
 
   useEffect(() => {
     loadPrefs();  //load saved prefs from backend on mount
@@ -242,6 +244,14 @@ const [showDeleteCodeInput, setShowDeleteCodeInput] = useState(false);
       if (!res.ok) {
         throw new Error(data?.error ?? `Failed to delete account (${res.status})`);
       }
+
+      //clears local ui state
+      setDeleteCode("");
+      setShowDeleteCodeInput(false);
+
+      //auth path cleared
+      await delUserId();
+      logout();//auth state update and then login screen
 
       Alert.alert("Account deleted", "Your CitySync account has been permanently removed.");
 
