@@ -194,7 +194,7 @@ const s = StyleSheet.create({
   emailHighlight: { color: "white", fontWeight: "700" },
 
   btn: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#D70E20",
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",

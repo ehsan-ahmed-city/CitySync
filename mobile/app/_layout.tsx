@@ -25,7 +25,7 @@ function AppGate() {
   if (auth.status === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: '#0b0b0f', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color="#3b82f6" size="large" />
+        <ActivityIndicator color="#D70E20" size="large" />
       </View>
     );
   }

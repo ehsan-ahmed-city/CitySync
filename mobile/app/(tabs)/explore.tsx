@@ -6,7 +6,7 @@ import {PrimBtn, DangerBtn} from "@/components/home/ActionBtns";
 import {useAuth} from "@/hooks/useAuth";
 
 const C = { bg: "#0B0B10", card: "#12121A", card2: "#161622", border: "rgba(255,255,255,0.08)",
-  text: "#FFFFFF", sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#3B82F6",
+  text: "#FFFFFF", sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#D70E20",
   danger: "#EF4444",success: "#22C55E",};//colour pallete for settings
 
 type Prefs = { //from backend preferences

@@ -3,10 +3,6 @@ import {View, Text, StyleSheet} from "react-native";
 import type { CourseworkDto } from "@/lib/CwHelpers";
 import { calcGrade, gradeColour, gradeLabel } from "@/lib/CwHelpers";
 
-// type Props = {
-//     moduleId: number;
-//     coursework: CourseworkDto[];
-// };
 
 export default function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: CourseworkDto[] }) {
   const cwForModule = coursework.filter((c) => c.moduleId === moduleId);
@@ -98,7 +94,7 @@ const gradeStyles = StyleSheet.create({
   heading: {color: "#d6d6df",fontWeight: "700",fontSize: 13,},
 
   barTrack: { flexDirection: "row", height: 8, borderRadius: 99, overflow: "hidden", backgroundColor: "#1f1f30",},
-  barFill: { backgroundColor: "#3B82F6", borderRadius: 99,},
+  barFill: { backgroundColor: "#D70E20", borderRadius: 99,},
   barLabel: { color: "#a9a9b6", fontSize: 11,},
 
   rangeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", marginTop: 4,},

@@ -90,7 +90,7 @@ export function gradeLabel(pct: number) {
 export function gradeColour(pct: number) {
 
   if (pct >= 70) return "#22C55E";
-  if (pct >= 60) return "#3B82F6";
+  if (pct >= 60) return "#D70E20";
   if (pct >= 50) return "#F59E0B";
   if (pct >= 40) return "#F97316";
   return "#EF4444";

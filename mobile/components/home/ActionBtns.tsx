@@ -50,7 +50,7 @@ export function DangerBtn({ title, onPress, disabled }: { title: string; onPress
 }
 
 const styles = StyleSheet.create({
-  btnPrimary: { backgroundColor: "#3b82f6", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
+  btnPrimary: { backgroundColor: "#D70E20", paddingVertical: 12, borderRadius: 12, alignItems: "center" },
   btnPrimaryText: { color: "white", fontWeight: "800" },//primary button text
 
   btnSecondary: { backgroundColor: "#1f1f2a", borderWidth: 1, borderColor: "#2b2b3b", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, alignItems: "center" }, // secondary button
