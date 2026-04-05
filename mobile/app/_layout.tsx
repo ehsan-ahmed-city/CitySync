@@ -12,6 +12,7 @@ import LoginScreen from '@/components/LoginScreen';
 
 export const unstable_settings = {
   anchor: '(tabs)',
+  //^tab group is main navigation anch
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -20,9 +21,9 @@ function AppGate() {
   const colorScheme = useColorScheme();
   const { auth, login} = useAuth();
 
-  useEffect(() => {SplashScreen.hideAsync();}, []);
+  useEffect(() => {SplashScreen.hideAsync();}, []);//hides once layout has mounted
 
-  if (auth.status === 'loading') {
+  if (auth.status === 'loading') {//loading spinner while auth state is resorted/loading
     return (
       <View style={{ flex: 1, backgroundColor: '#0b0b0f', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator color="#D70E20" size="large" />
@@ -38,8 +39,10 @@ function AppGate() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/*main tab app screen*/}
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen name="+not-found" />
+        {/*fallback screen for any other outes*/}
       </Stack>
 
     </ThemeProvider>

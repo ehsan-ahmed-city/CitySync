@@ -5,23 +5,21 @@ import {API_BASE, authHeaders, getUserId} from "@/lib/api";
 
 
 type Props = {
+  onLogin: (userId: number) => void;};//store logged in user
 
-  onLogin: (userId: number) => void;
-};
-
-/**two step login screen
- *1 enter email, tap send Codec to POST /auth/request-code
+/**two step email login screen
+ *1 enter email, backend verification code sent
  *2 enter 6 digit code, tap verify to POST /auth/verify-code to returns userId */
 export default function LoginScreen({ onLogin }: Props) {
-
+  //where user is on email input or code verif
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sentTo, setSentTo] = useState("");
+  const [loading, setLoading] = useState(false);//disables input/buttons
+  const [sentTo, setSentTo] = useState("");//stores email the code sent so second req uses same adress
 
   async function handleRequestCode() {
-
+    //normalise email before to backend
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) { Alert.alert("Email required", "Please enter your email address.");
       return;
@@ -39,6 +37,8 @@ export default function LoginScreen({ onLogin }: Props) {
       if (!res.ok) { Alert.alert("Error", json.error ?? "Failed to send code.");
         return;
       }
+
+      //move to verif after backend accepts email
       setSentTo(trimmed);
       setStep("code");
     } catch (e: any) {Alert.alert("Network error", String(e?.message ?? e));
@@ -46,6 +46,8 @@ export default function LoginScreen({ onLogin }: Props) {
   }
 
   async function handleVerifyCode() {
+
+  //validation before making verif req
     const trimmedCode = code.trim();
     if (trimmedCode.length !== 6) { Alert.alert("invalid code", "please enter the 6 digit code from your email");
       return;
@@ -63,6 +65,8 @@ export default function LoginScreen({ onLogin }: Props) {
       if (!res.ok) {Alert.alert("verification failed", json.error ?? "incorect/expired code.");
         return;
       }
+
+      //successful verf returns userId to pass into auth state
       onLogin(Number(json.userId));
     } catch (e: any) {Alert.alert("Network error", String(e?.message ?? e));
     } finally {setLoading(false);}
@@ -70,6 +74,7 @@ export default function LoginScreen({ onLogin }: Props) {
 
   return (
     <SafeAreaView style={s.safe}>
+    {/*stops keyboard covering input on app*/}
       <KeyboardAvoidingView
         style={s.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -161,47 +166,48 @@ export default function LoginScreen({ onLogin }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+    const s = StyleSheet.create({
 
-  safe:{ flex: 1, backgroundColor: "#0b0b0f" },
-  flex:{ flex: 1 },
-  container: {flex: 1, justifyContent: "center", padding: 24, gap: 24,},
-  hero: { alignItems: "center", gap: 6 },
-  appName: {fontSize: 36, fontWeight: "800", color: "white",letterSpacing: -0.5,},
-  tagline: { color: "#a9a9b6", fontSize: 14 },
+        safe:{ flex: 1, backgroundColor: "#0b0b0f" },
+        flex:{ flex: 1 },
 
-  card: {backgroundColor: "#14141a", borderRadius: 20,borderWidth: 1,
-    borderColor: "#232331",padding: 20,gap: 12,},
-  cardTitle: { color: "white", fontSize: 18, fontWeight: "800" },
-  hint:  { color: "#a9a9b6", fontSize: 13, lineHeight: 20 },
-  label: { color: "#a9a9b6", fontWeight: "600", fontSize: 13 },
+        //login card centers vertically
+        container: {flex: 1, justifyContent: "center", padding: 24, gap: 24,},
+        hero: { alignItems: "center", gap: 6 },
+        appName: {fontSize: 36, fontWeight: "800", color: "white",letterSpacing: -0.5,},
+        tagline: { color: "#a9a9b6", fontSize: 14 },
 
-  input: {
-    backgroundColor: "#0f0f14",
-    borderWidth: 1,
-    borderColor: "#2a2a3a",
-    borderRadius: 12,
-    padding: 14,
-    color: "white",
-    fontSize: 16,
-  },
-  codeInput: {
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: 10,
-    textAlign: "center",
-  },
-  emailHighlight: { color: "white", fontWeight: "700" },
+        card: {backgroundColor: "#14141a", borderRadius: 20,borderWidth: 1, borderColor: "#232331",padding: 20,gap: 12,},
+        cardTitle: { color: "white", fontSize: 18, fontWeight: "800" },
+        hint:  { color: "#a9a9b6", fontSize: 13, lineHeight: 20 },
+        label: { color: "#a9a9b6", fontWeight: "600", fontSize: 13 },
 
-  btn: {
-    backgroundColor: "#D70E20",
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  btnText: { color: "white", fontWeight: "800", fontSize: 16 },
+        input: {
+          backgroundColor: "#0f0f14",
+          borderWidth: 1,
+          borderColor: "#2a2a3a",
+          borderRadius: 12,
+          padding: 14,
+          color: "white",
+          fontSize: 16,
+        },
+        codeInput: {
+          fontSize: 28,
+          fontWeight: "800",
+          letterSpacing: 10,
+          textAlign: "center",
+        },
+        emailHighlight: { color: "white", fontWeight: "700" },
 
-  back: { alignItems: "center", paddingVertical: 8 },
-  backText: { color: "#a9a9b6", fontSize: 13 },
-});
+        btn: {
+          backgroundColor: "#D70E20",
+          borderRadius: 14,
+          paddingVertical: 14,
+          alignItems: "center",
+          marginTop: 4,
+        },
+        btnText: { color: "white", fontWeight: "800", fontSize: 16 },
+
+        back: { alignItems: "center", paddingVertical: 8 },
+        backText: { color: "#a9a9b6", fontSize: 13 },
+      });

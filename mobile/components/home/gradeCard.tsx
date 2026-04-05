@@ -6,10 +6,11 @@ import { calcGrade, gradeColour, gradeLabel } from "@/lib/CwHelpers";
 
 export default function GradeCard({ moduleId, coursework }: { moduleId: number; coursework: CourseworkDto[] }) {
   const cwForModule = coursework.filter((c) => c.moduleId === moduleId);
-  const grade = calcGrade(cwForModule);
+  //only use cw belonging to current module
+  const grade = calcGrade(cwForModule);//calculates allocated,completed weighting and min/max grades
 
   if (!grade) {
-
+  //if no cw data to estimate grade
     return (
 
       <View style={gradeStyles.container}>
@@ -34,6 +35,7 @@ export default function GradeCard({ moduleId, coursework }: { moduleId: number; 
     <View style={gradeStyles.container}>
       <Text style={gradeStyles.heading}>Grade Prediction</Text>
 
+      {/*progress bar show how much of allocated module weighting already completed*/}
       <View style={gradeStyles.barTrack}>
         <View style={[gradeStyles.barFill, { flex: progressFraction }]} />
         <View style={{ flex: 1 - progressFraction }} />
@@ -44,6 +46,7 @@ export default function GradeCard({ moduleId, coursework }: { moduleId: number; 
         {remainingWeight > 0 ? ` • ${remainingWeight}% remaining` : " all submitted"}
       </Text>
 
+      {/*grade range from 0 to 100%*/}
       <View style={gradeStyles.rangeRow}>
         <View style={gradeStyles.rangeBox}>
 

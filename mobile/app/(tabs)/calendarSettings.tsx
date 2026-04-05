@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, Switch, Text, View } from "react-native";
 import * as Calendar from "expo-calendar";
 import { getSelectedCalendarIds, setSelectedCalendarIds, clearSelectedCalendarIds,} from "@/lib/calendarPrefs";
+import {PrimBtn, SecBtn} from "@/components/home/ActionBtns";
 
-type CalRow = {
+type CalRow = {//calendar object for rendering
   id: string;
   title: string;
   source?: string;
@@ -13,8 +14,10 @@ type CalRow = {
 
 const colours = {bg: "#0B0B10",card: "#12121A",card2: "#161622",border: "rgba(255,255,255,0.08)",text: "#FFFFFF",
   sub: "rgba(255,255,255,0.72)",muted: "rgba(255,255,255,0.45)",primary: "#D70E20",};
+  //^color themes for ui
 
 function Pill({ label }: { label: string }) {
+//ui for displaying data
   return (
     <View
       style={{
@@ -30,68 +33,22 @@ function Pill({ label }: { label: string }) {
   );
 }
 
-function PrimaryButton({
-  title,
-  onPress,
-}: {
-  title: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        backgroundColor: colours.primary,
-        paddingVertical: 12,
-        borderRadius: 14,
-        alignItems: "center",
-        opacity: pressed ? 0.8 : 1,//visual feedback when touched
-      })}
-    >
-      <Text style={{ color: colours.text, fontWeight: "800" }}>{title}</Text>
-    </Pressable>
-  );
-}
-
-function SecondaryButton({
-  title,
-  onPress,
-}: {
-  title: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({//colours for the app ui
-        backgroundColor: colours.card2,
-        paddingVertical: 12,
-        borderRadius: 14,
-        alignItems: "center",
-        borderWidth: 1,
-        borderColor: colours.border,
-        opacity: pressed ? 0.8 : 1,
-      })}
-    >
-      <Text style={{ color: colours.text, fontWeight: "800" }}>{title}</Text>
-    </Pressable>
-  );
-}
-
 export default function CalendarSettingsScreen() {
-  const [status, setStatus] = useState("idle");
-  const [cals, setCals] = useState<CalRow[]>([]);
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [status, setStatus] = useState("idle");//ui state for loading status msgs
+  const [cals, setCals] = useState<CalRow[]>([]);//all calendars on device
+  const [selected, setSelected] = useState<Record<string, boolean>>({}); //calendar ideas with boolean for toggle
 
-  const selectedCount = useMemo(
+  const selectedCount = useMemo(//counting cals selected
     () => Object.values(selected).filter(Boolean).length,
     [selected]
   );
 
   async function loadCalendars() {
+  //load calemdars from device and save selection
     setStatus("requesting calendar permission...");
     const perm = await Calendar.requestCalendarPermissionsAsync();
     if (perm.status !== "granted") {
+    //block if perms denied
       setStatus("permission denied");
       Alert.alert("Permission needed", "Enable calendar permission to select timetable calendars..");
       return;
@@ -101,6 +58,7 @@ export default function CalendarSettingsScreen() {
     const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
     const rows: CalRow[] = calendars.map((c) => ({
+    //map expo cal obj into simple structure
       id: c.id,
       title: c.title ?? "(no title)",
       source: (c as any).source?.name ?? undefined,
@@ -108,6 +66,7 @@ export default function CalendarSettingsScreen() {
       allowsModifications: c.allowsModifications,
     }));
 
+    //gets prev saved selection from storage
     const saved = await getSelectedCalendarIds();
     const nextSel: Record<string, boolean> = {};
     for (const r of rows) {nextSel[r.id] = saved ? saved.includes(r.id) : false;}
@@ -118,15 +77,16 @@ export default function CalendarSettingsScreen() {
   }
 
   useEffect(() => {
+  //runs once to fetch calendars
     loadCalendars().catch((e) => Alert.alert("Error", String(e?.message ?? e)));
   }, []);
 
   async function save() {
-    const ids = Object.entries(selected)
-      .filter(([, v]) => v)
-      .map(([k]) => k);
+  //func to save selection
+    const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
 
     if (ids.length === 0) {
+    //at least one calendar selected
       Alert.alert("Select at least one","Pick your timetable calendar so CitySync knows what to include.");
       return;
     }
@@ -150,6 +110,7 @@ export default function CalendarSettingsScreen() {
   }
 
   async function reset() {
+  //calers calendar selects and reload
     await clearSelectedCalendarIds();
     await loadCalendars();
     Alert.alert("Reset", "Cleared timetable calendar selection.");
@@ -192,13 +153,11 @@ export default function CalendarSettingsScreen() {
           <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
             <View style={{ flex: 1 }}>
 
-              <PrimaryButton title="Save selection" onPress={confirmSave}/>
+              <PrimBtn title="Save selection" onPress={confirmSave}/>
             </View>
             <View style={{ flex: 1 }}>
 
-              <SecondaryButton
-                title="Reset"
-                onPress={() => {
+              <SecBtn title="Reset" onPress={() => {
                   reset().catch((e) => Alert.alert("Reset error", String(e)));
                 }}
               />

@@ -5,6 +5,7 @@ import GradeCard from "@/components/home/GradeCard";
 import type { CourseworkDto } from "@/lib/CwHelpers";
 
 type ModuleDto = {
+//front module shape from backend
     id: number;
     userId: number;
     code: string;
@@ -16,7 +17,9 @@ type Props = {
 
     modules: ModuleDto[];
     coursework: CourseworkDto[];
+    //lists needed to render modules and grades
 
+    //form for creating new module
     mCode: string;
     setMCode: (value: string) => void;
     mName: string;
@@ -31,13 +34,13 @@ type Props = {
     deleteModule: (moduleId: number) => void;
 };
 
-export default function ModuleCard({
+export default function ModuleCard({//card for module ctreation and display
     modules,coursework,mCode,setMCode,mCredits,setMCredits,mName,setMName,createModule,updateModule,deleteModule,
 }: Props){
 
     return (
         <>
-          {/* Add Module */}
+          {/* Form to add module */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Add module</Text>
 
@@ -66,7 +69,7 @@ export default function ModuleCard({
 
             <FlatList
               data={modules}
-              keyExtractor={(m) => String(m.id)}
+              keyExtractor={(m) => String(m.id)}//list key is string
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
               renderItem={({ item }) => (
@@ -77,19 +80,18 @@ export default function ModuleCard({
                     <Text style={styles.itemSub}>{item.name}</Text>
                     <Text style={styles.muted}>Credits: {item.credits ?? "n/a"} • ID: {item.id}</Text>
 
+                    {/*grade for module based on cw*/}
                     <GradeCard moduleId={item.id} coursework={coursework} />
                   </View>
 
                   <View style={{ gap: 8 }}>
-                    <Button title="Rename" onPress={() =>
+                    <Button title="Rename" onPress={() =>//user gets prompted to rename module
                         Alert.prompt(
                           "Rename module",
                           "Enter a new module name",
                           [
                             { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Save",
-                              onPress: (value) => {
+                            {text: "Save",onPress: (value) => {
 
                                 const nextName = value?.trim();
                                 if (!nextName) return;
@@ -106,7 +108,7 @@ export default function ModuleCard({
                     <DangerBtn
                       title="Delete"
                       onPress={() =>
-                        Alert.alert(
+                        Alert.alert(//confirmation so no accidental deletion
                           "Delete module?",
                           "This will also delete it's coursework",
                           [
@@ -127,6 +129,7 @@ export default function ModuleCard({
     }
 
 const styles = StyleSheet.create({
+//container for create form and list
   card: {
     padding: 16,
     borderRadius: 18,
@@ -145,7 +148,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontWeight: "600",
   },
-  input: {
+
+
+  input: {//for module form fields
     backgroundColor: "#0f0f14",
     borderWidth: 1,
     borderColor: "#2a2a3a",
@@ -162,7 +167,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 10,
   },
-  itemCard: {
+
+  itemCard: {//for each module card
     flexDirection: "row",
     gap: 12,
     padding: 14,
