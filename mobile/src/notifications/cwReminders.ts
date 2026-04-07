@@ -43,8 +43,6 @@ Notifications.setNotificationHandler({
 function parseDueDate(dueDate: string): Date | null {
   if (!dueDate) return null;
 
-//   if(/^\d{4}-\d{2}-\d{2}test(dueDate)) //regex fail
-
   const isDateOnly = dueDate.length === 10 && dueDate[4] === "-" && dueDate[7] === "-" && !dueDate.includes("T");//format for YYYY-MM-DD
 
   if (isDateOnly) {//if date only, treat as end of the day 23:59
@@ -133,7 +131,8 @@ export async function scheduleCourseworkReminders(//schedule reminder notificati
     { when: minusMs(due, 7 * 24 * 60 * 60 * 1000), label: "Due in 7 days" },
     { when: minusMs(due, 3 * 24 * 60 * 60 * 1000), label: "Due in 3 days" },
     { when: atMorningSameDay(due, 9), label: "Due today!" },
-    { when: minusMs(due, 3 * 60 * 60 * 1000), label: "Due in 3 hours!!!" },
+    { when: minusMs(due, 3 * 60 * 60 * 1000), label: "Due in 3 hours!!" },
+    { when: minusMs(due, 1 * 60 * 60 * 1000), label: "Due in an hour!!!" },
     //like a ocuntdown
 
   ].filter((t) => isFuture(t.when)); //only schedule future reminders

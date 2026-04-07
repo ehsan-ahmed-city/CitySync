@@ -8,7 +8,7 @@ export type CourseworkDto = {
 
   //completion fields
   completed?: boolean;
-  completedAt?: string | null;
+  completedAt?: String | null;
   scorePercent?: number | null;
 
   onSite?: boolean;
@@ -74,14 +74,42 @@ export function formatTime(date: Date) {
 
 }
 
-export function daysUntil(dateTimeString: string) {
-    const due = new Date(dateTimeString);
-    const ms = due.getTime() - Date.now();
-    return Math.floor(ms / (1000 * 60 * 60 * 24));
-  }
+export function getReminderLevel(dateTimeString: string){//how urgent cw or exam is
+    const due= new Date(dateTimeString);//iso to js date obj
+    const ms = due.getTime() - Date.now();//difference between current and due time in miliseconds
 
+    if (isNaN(due.getTime())){
+        return { label: "unknown", freq:";("};
+        //sad face if time isn't number lol
+    }
+
+    const hourMs = 1000*60*60;//1 hr
+    const dayMs = hourMs * 24;//1 day
+
+    if (ms < 0){
+        return {label: "OVERDUE", freq: "deadline passed"}//if overdue
+    }
+
+
+    /**deadline countdown from 5 days to 1 hour*/
+    if (ms <= 1 * hourMs){
+        return {label: "URGENT, have you submitted?", freq: "due today"};
+    }
+
+    if (ms <= 3 * hourMs){
+        return {label: "URGENT", freq: "due today"};
+    }
+
+    if (ms <= 5 * dayMs){
+        return {label: "SOON", freq:"within 5 days"};
+    }
+
+    return {label:"NORMAL", freq: "more than 5 days left :D"};
+
+}
 
 export function gradeLabel(pct: number) {
+//percent to uk degree levels
 
   if (pct >= 70) return "First (1st)";
   if (pct >= 60) return "2:1";
@@ -91,21 +119,15 @@ export function gradeLabel(pct: number) {
 }
 
 export function gradeColour(pct: number) {
-
-  if (pct >= 70) return "#22C55E";
-  if (pct >= 60) return "#D70E20";
+//colours for grade performance
+  if (pct >= 70) return "#00c448";
+  if (pct >= 60) return "#9ef916";
   if (pct >= 50) return "#F59E0B";
   if (pct >= 40) return "#F97316";
   return "#EF4444";
 
 }
 
-export function getReminderLevel(daysLeft: number) {
-  //reminders for how close a coursework is
-    if (daysLeft <= 0) return { label: "OVERDUE", freq: "every 4 hours" };
-    if (daysLeft <= 1) return { label: "URGENT", freq: "daily" };
-    if (daysLeft <= 5) return { label: "SOON", freq: "every 2 days" };
-    return { label: "NORMAL", freq: "weekly" };
-  }
+
 
 

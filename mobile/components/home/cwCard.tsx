@@ -4,7 +4,7 @@ import {Picker} from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { PrimBtn, SecBtn, DangerBtn } from "@/components/home/ActionBtns";
 import type { CourseworkDto } from "@/lib/CwHelpers";
-import { formatDate, formatTime, daysUntil, getReminderLevel } from "@/lib/CwHelpers";
+import { formatDate, formatTime, getReminderLevel } from "@/lib/CwHelpers";
 
 
 type ModuleDto = {id: number; userId: number; code: string; name: string; credits: number | null;};
@@ -231,8 +231,7 @@ export default function CwCard({ //recieved all state and handles from index
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
               renderItem={({ item }) => {
 
-                const dl = daysUntil(item.dueDate);
-                const lvl = getReminderLevel(dl);
+                const lvl = getReminderLevel(item.dueDate);
 
                 const isEditing = editingCwId === item.id;
                 const done = !!item.completed;
