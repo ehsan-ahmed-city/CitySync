@@ -10,6 +10,9 @@ export type CourseworkDto = {
   completed?: boolean;
   completedAt?: string | null;
   scorePercent?: number | null;
+
+  onSite?: boolean;
+  location?: String | null;//whether cw is in-person or not
 };
 
 export function calcGrade(cwItems: CourseworkDto[]) {

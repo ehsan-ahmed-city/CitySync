@@ -1,5 +1,5 @@
 import React from "react";
-import {View,Text, TextInput, FlatList, Pressable, StyleSheet, Alert} from "react-native";
+import {View,Text, TextInput, FlatList, Pressable, StyleSheet, Alert,Switch} from "react-native";
 import {Picker} from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { PrimBtn, SecBtn, DangerBtn } from "@/components/home/ActionBtns";
@@ -34,6 +34,11 @@ type Props = {
   cwWeighting: string;//input for weighting
   setCwWeighting: (value: string) => void;
 
+  cwOnSite: boolean;
+  setCwOnSite: (value: boolean) => void;
+  cwLocation: string;
+  setCwLocation: (value: string) => void;
+
   createCoursework: () => void;
   //submiting new cw
 
@@ -61,6 +66,11 @@ type Props = {
   cancelEditing: () => void;
   //^entering and exiting edit mode
 
+  editOnSite: boolean;
+  setEditOnSite: (value: boolean) => void;
+  editLocation: string;
+  setEditLocation: (value: string) => void;
+
   deleteCw : (item: CourseworkDto) => void;
 };
 
@@ -73,6 +83,7 @@ export default function CwCard({ //recieved all state and handles from index
   //^selecte dmodule for new cw, form title and datetime
   showDatePicker,setShowDatePicker,showTimePicker,
   setShowTimePicker,cwWeighting,setCwWeighting,
+  cwOnSite,setCwOnSite,cwLocation,setCwLocation,
   createCoursework,editingCwId,editTitle,
   //date picker and time picker
   setEditTitle,editDueDateObj,setEditDueDateObj,
@@ -81,7 +92,8 @@ export default function CwCard({ //recieved all state and handles from index
   setEditScorePercent,showEditDP,setEditDP,
   showEditTP,setEditTP,updateCoursework,
   setCourseworkCompleted,startEditingCw,
-  cancelEditing,deleteCw,
+  cancelEditing,editOnSite, setEditOnSite,
+  editLocation,setEditLocation,deleteCw,
   //toggle complete, save edit, start/cancel editing
 }:Props){
     return (
@@ -168,6 +180,24 @@ export default function CwCard({ //recieved all state and handles from index
 
             <Text style={styles.label}>Title</Text>
             <TextInput value={cwTitle} onChangeText={setCwTitle} style={styles.input} placeholder="Coursework title" placeholderTextColor="#555" />
+
+            <View style = {{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10}}>
+                <Text style={styles.label}>On-site assessment?</Text>
+                <Switch value={cwOnSite} onValueChange={setCwOnSite}/>
+            </View>
+
+            {cwOnSite &&(
+            <>
+                <Text style={styles.label}> Location </Text>
+                <TextInput
+                    value={cwLocation}
+                    onChangeText={setCwLocation}
+                    style={styles.input}
+                    placeholder="city main campus or the crypt etc"
+                    placeholderTextColor="#555"
+                />
+            </>
+            )}
 
             <View style={styles.rowGap}>
               <PrimBtn title="Create coursework" onPress={createCoursework} />
@@ -297,6 +327,19 @@ export default function CwCard({ //recieved all state and handles from index
                             placeholderTextColor= "#555"
                           />
 
+                          {editOnSite &&(
+                            <>
+                                <Text style = {styles.editLabel}>Location</Text>
+                                <TextInput
+                                    value={editLocation}
+                                    onChangeText={setEditLocation}
+                                    style={styles.editInput}
+                                    placeholder="city main campus, exam room, the Crpyt etc."
+                                    placeholderTextColor="#555"
+                                />
+                            </>
+                          )}
+
                           <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
 
                             <PrimBtn title="Save" onPress={() => updateCoursework(item)} />
@@ -358,7 +401,7 @@ const styles = StyleSheet.create({
   muted: { color: "#a9a9b6", marginTop: 6 },
   //^any text underneath
 
-  badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status chip (completed/pending etc)
+  badge: { marginTop: 10, alignSelf: "flex-start", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, overflow: "hidden", fontWeight: "800", backgroundColor: "#1f1f2a", color: "white" }, // status for complete/pending
 
   editPanel: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: "#12121c", borderWidth: 1, borderColor: "#2a2a40", gap: 6 }, // inline edit box
   editLabel: { color: "#a9a9b6", fontSize: 12, fontWeight: "600" },//edit label

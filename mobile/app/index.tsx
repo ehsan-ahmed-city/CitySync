@@ -31,7 +31,7 @@ export default function Index() {
                 alignItems: "center",
             }}
         >
-            {/**/Async check runs so loading indicator shown}
+            {/*Async check runs so loading indicator shown*/}
             <ActivityIndicator size = "large" color="#D70E20" />
         </View>
     );

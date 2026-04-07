@@ -99,8 +99,9 @@ npx expo start
 ipconfig for windows
 ifconfig for mac
 
-The app uses a hardcoded backend URL in const API_BASE = "http://192.168.0.12:8080";
-Once you get your IP add colons and the 8080 port like: "http://IP.168.x.y:8080"
+The app uses a hardcoded backend URL in const API_BASE = "http://192.168.0.12:8080;"
+
+Once you get your IP add colons and the 8080 port like: "http://IP.168.x.y:8080;"
 
 and go into C:\Users\whatever\CitySync\CitySync\mobile\lib\api.ts and change the value of API_BASE to that.
 

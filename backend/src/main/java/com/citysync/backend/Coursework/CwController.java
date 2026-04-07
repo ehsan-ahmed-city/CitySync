@@ -16,6 +16,8 @@ public class CwController {
     private final ModuleRepository moduleRepo;
     private final CwRepo cwRepo;
 
+    private static final String defaultUniLoc="City St George's, University of London, Northampton Square, London EC1V 0HB";
+
     public CwController(UserRepo userRepo, ModuleRepository moduleRepo, CwRepo cwRepo) {
         this.userRepo = userRepo;
         this.moduleRepo = moduleRepo;
@@ -62,6 +64,7 @@ public class CwController {
             return ResponseEntity.badRequest().build();
         }
 
+
         if(req.weighting() != null && (req.weighting() < 0 ||req.weighting() > 100)){
             return ResponseEntity.badRequest().body("Weighting must be betweenn 0 and 100 ;(");
         }
@@ -70,11 +73,19 @@ public class CwController {
             return ResponseEntity.badRequest().body("Total coursework weighting for this module cant exceed 100");
         }
 
-        //save coursework linked to the module
-        Coursework saved = cwRepo.save(
-                new Coursework(module, req.title(), req.dueDate(), req.weighting())
-        );
+        String finalLocation = req.location();
 
+        if (Boolean.TRUE.equals(req.onSite()) && (finalLocation ==null || finalLocation.isBlank())){
+            finalLocation=defaultUniLoc;//if user doesnt enter location then defaults to uni campus
+        }
+
+        //save coursework linked to the module
+        Coursework cw = new Coursework(module, req.title(), req.dueDate(), req.weighting());
+
+        cw.setOnSite(req.onSite()!= null ? req.onSite(): false);
+        cw.setLocation(req.location());
+
+        Coursework saved = cwRepo.save(cw);
         return ResponseEntity.ok(CourseworkResponse.from(saved));//return DTO response
     }
 
@@ -136,6 +147,22 @@ public class CwController {
             cw.setScorePercent(req.scorePercent());
         }
 
+        if(req.onSite() != null){
+            cw.setOnSite(req.onSite());//update whether cw is on-site event
+
+            if(!req.onSite()){
+                cw.setLocation(null);//switched off clears saved location
+            }
+        }
+
+        if(req.location() != null){
+            cw.setLocation(req.location());
+            //only updates location when value is provided
+        }
+        if(cw.isOnSite() && (cw.getLocation() == null || cw.getLocation().isBlank())){
+            cw.setLocation(defaultUniLoc);
+        }
+
         if (req.completed() != null) {
             cw.setCompleted(req.completed());//completion toggle
         }
@@ -190,16 +217,18 @@ public class CwController {
 }
 
 //request body JSON for create coursework
-record CreateCourseworkReq(String title, LocalDateTime dueDate, Integer weighting) {}
+record CreateCourseworkReq(String title, LocalDateTime dueDate, Integer weighting, Boolean onSite, String location) {}
 
-record UpdateCourseworkReq(String title, LocalDateTime dueDate, Integer weighting, Boolean completed, java.math.BigDecimal scorePercent) {}
+record UpdateCourseworkReq(String title, LocalDateTime dueDate, Integer weighting, Boolean completed,
+                           java.math.BigDecimal scorePercent, Boolean onSite, String location) {}
 
 /**
  * response DTO returned to the client
  * keeps response small by not returning full module/user objects*/
 record CourseworkResponse(
         Long id, Long moduleId, Long userId, String title, LocalDateTime dueDate,
-        Integer weighting, Boolean completed, Instant completedAt, java.math.BigDecimal scorePercent
+        Integer weighting, Boolean completed, Instant completedAt, java.math.BigDecimal scorePercent,
+        Boolean onSite, String location
 ) {
     static CourseworkResponse from(Coursework c) {
         return new CourseworkResponse(
@@ -208,8 +237,8 @@ record CourseworkResponse(
                 c.getModule().getUser().getId(),
                 c.getTitle(),c.getDueDate(),
                 c.getWeighting(),c.isCompleted(),
-                c.getCompletedAt(),c.getScorePercent()
-
+                c.getCompletedAt(),c.getScorePercent(),
+                c.isOnSite(), c.getLocation()
         );
     }
 }

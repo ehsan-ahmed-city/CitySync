@@ -28,6 +28,8 @@ type CourseworkDto = {
   title: string;
   dueDate: string;
   weighting: number | null;
+  onSite: boolean;
+  location: string | null;
 };
 
 type UnifiedItem = {
@@ -79,11 +81,9 @@ function ymd(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function parseDueDateTyp(yyyyMmDd: string) {
-  //coursework deadline as 5pm loocal time for display
-  const [y, m, d] = yyyyMmDd.split("-").map(Number);
-  const dt = new Date(y, m - 1, d, 17, 0, 0, 0);
-  return dt;
+function parseCwDate(dateTimeString: string) {
+    return new Date(dateTimeString);
+    //full iso string for cw items for calendar view
 }
 
 async function fetchTravelMins(home: string, destination: string, arrivalTime?: string): Promise<number | null> {
@@ -296,7 +296,7 @@ export default function CalendarScreen() {
   }, []);
 
   async function openRouteDetails(item: UnifiedItem) {//activates when user taps the route detail button
-    if (item.source !== "timetable") return;//only timetable items have routes
+    if (item.source !== "timetable" && item.source !== "coursework") return;//only timetable items and one-site cw items have routes
 
     if (!homeLocation || homeLocation.trim() === "") {
       Alert.alert("No home address", "set your home address in prefs first");
@@ -310,9 +310,11 @@ export default function CalendarScreen() {
       setSelectedRouteTitle(item.title);//store evnt title for display
       setRouteModalVisible(true);//opens route modal screen
 
+      const targetDest = item.source === "coursework" ? (item.location?.trim() || destination) : destination;
+
       const details = await fetchTravelDetails(//func to fetch route details form backend
         homeLocation,
-        destination,
+        targetDest,
         item.start.toISOString()
       );
 
@@ -507,19 +509,76 @@ export default function CalendarScreen() {
       }
       const coursework = (await cwRes.json()) as CourseworkDto[];
 
-      const courseworkItems: UnifiedItem[] = coursework.map((c) => {
-        const end = parseDueDateTyp(c.dueDate); //typical due date time is 5pm
-        const start = new Date(end);
-        start.setMinutes(start.getMinutes() - 30);//show as a 30 min block
-        return {
-          key: `cw-${c.id}`,
-          source: "coursework",
-          title: c.title,
-          start,
-          end,
-          meta: `Module ${c.moduleId}${c.weighting != null ? ` • ${c.weighting}%` : ""}`,
-        };
-      });
+      const courseworkItems: UnifiedItem[] = await Promise.all(
+        coursework.map(async (c) => {
+          const end = parseCwDate(c.dueDate); //typical due date time is 5pm
+          const start = new Date(end);
+          start.setMinutes(start.getMinutes() - 30);//show as a 30 min block
+
+          let leaveMeta = "";
+          let routeMeta = "";
+
+          const location = c.onSite ? (c.location?.trim() || currentDest) : undefined;
+
+          if (c.onSite) {
+
+            const arrivalTime = end.toISOString();
+
+            const liveTravelMins = await fetchTravelMins(
+              currentHome,
+              location ?? currentDest,
+              arrivalTime
+            );
+
+            const travelMins = liveTravelMins ?? estimateMinsHomeUnifb(currentHome);
+
+            if (travelMins != null) {
+              //use END time for coursework arrival, not the visual block start
+              const leaveAt = calcLeaveTime(end, travelMins, bufferMins);
+
+              const notifId = await scheduleLeaveSoonNotif(
+                c.title,
+                leaveAt,
+                travelMins,
+                bufferMins
+              );
+
+              if (notifId) {
+                scheduledNotifIds.push(notifId);
+              }
+
+              leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`;
+
+              const usedFallback = liveTravelMins == null;
+              routeMeta = `Route: Home -> ${location ?? currentDest} (${travelMins} mins${usedFallback ? " est." : ""})`;
+
+            } else {
+
+              routeMeta = "Set home address in preferences to get leave time";
+            }
+          }
+
+          const metaParts = [
+            `Module ${c.moduleId}${c.weighting != null ? ` • ${c.weighting}%` : ""}`,
+            c.onSite ? "On-site" : "",
+            leaveMeta,
+            routeMeta,
+          ].filter(Boolean);
+
+          return {
+            key: `cw-${c.id}`,
+            source: "coursework",
+            title: c.title,
+            start,
+            end,
+            location,
+            meta: metaParts.join(" • "),
+          };
+        })
+      );
 
       const merged = [...timetableItems, ...courseworkItems].filter(//merge and filter to only items in the week
         (it) => it.start >= weekStart && it.start < weekEnd
@@ -625,7 +684,7 @@ export default function CalendarScreen() {
               ) : null}
 
               {/*}only shows button for future timetable evnts*/}
-              {item.source === "timetable" && !past ?(
+              {(item.source === "timetable" || item.source === "coursework") && !past ?(
                 <Pressable
                     onPress={() => openRouteDetails(item)}
                     style={{marginTop: 8 }}

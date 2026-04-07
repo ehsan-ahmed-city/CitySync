@@ -52,6 +52,12 @@ export default function HomeScreen() {
   const [showEditDP, setEditDP] = useState(false); //editing date picker and setter
   const [showEditTP, setEditTP] = useState(false); //editing time picker and setter
 
+  const [cwOnSite, setCwOnSite] = useState(false);
+  const [cwLocation, setCwLocation] = useState("");
+
+  const [editOnSite, setEditOnSite] = useState(false);
+  const [editLocation, setEditLocation] = useState("");
+
   const { logout } = useAuth();
 
   async function loadModules() {//GET/users/{id}/modules
@@ -205,6 +211,8 @@ export default function HomeScreen() {
           title: cwTitle,
           dueDate: formatDate(cwDueDateObj),
           weighting: newWeight,
+          onSite: cwOnSite,
+          location: cwOnSite ? cwLocation.trim() : null,
         }),
       });
 
@@ -254,7 +262,7 @@ export default function HomeScreen() {
             ...(await authHeaders()),
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(patch),//convert JS object to JSON string
+          body: JSON.stringify(patch),//js object to JSON string
         }
       );
 
@@ -283,7 +291,7 @@ export default function HomeScreen() {
   }
 
 
-  async function deleteModule(moduleId: number) { //deletes a module by ID
+  async function deleteModule(moduleId: number) {//deletes a module by ID
 
     //ui status feedback
     setStatus("deleting module...");
@@ -367,6 +375,7 @@ export default function HomeScreen() {
 
             title: newTitle,dueDate: formatDate(newDueDate),weighting: newWeighting,
             scorePercent: editScorePercent.trim() === "" ? null : Number(editScorePercent.trim()),
+            onSite: editOnSite, location: editOnSite ? editLocation.trim() : null,
           }),
 
         }
@@ -499,6 +508,8 @@ export default function HomeScreen() {
     setEditDueDateObj(new Date(item.dueDate));
     setEditWeighting(item.weighting != null ? String(item.weighting) : "");
     setEditScorePercent(item.scorePercent != null ? String(item.scorePercent) : "");
+    setEditOnSite(item.onSite ?? false);
+    setEditLocation(item.location ?? "");
   }
 
   const stats = useMemo(() => {
@@ -578,6 +589,14 @@ export default function HomeScreen() {
             showEditTP={showEditTP}
             setEditTP={setEditTP}
             setEditDP={setEditDP}
+            cwOnSite = {cwOnSite}
+            setCwOnSite={setCwOnSite}
+            cwLocation={cwLocation}
+            setCwLocation={setCwLocation}
+            editOnSite = {editOnSite}
+            setEditOnSite = {setEditOnSite}
+            editLocation = {editLocation}
+            setEditLocation = {setEditLocation}
           />
 
         </ScrollView>

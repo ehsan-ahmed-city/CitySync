@@ -38,6 +38,11 @@ public class Coursework {
     @Column(name = "score_percent")
     private java.math.BigDecimal scorePercent;
 
+    @Column(nullable = false)
+    private boolean onSite = false; //for onsite stuff like vivas
+
+    private String location;//for route calc if in different location
+
     private Instant completedAt;
 
     protected Coursework() {
@@ -64,6 +69,10 @@ public class Coursework {
 
     public java.math.BigDecimal getScorePercent(){ return scorePercent;}
 
+    public boolean isOnSite(){return onSite;}
+
+    public String getLocation() {return location;}
+
     //setters
     public void setTitle(String title) {
         this.title = title;
@@ -85,4 +94,7 @@ public class Coursework {
     public void setScorePercent(java.math.BigDecimal scorePercent) {
         this.scorePercent = scorePercent;
     }
+
+    public void setOnSite(boolean onSite) {this.onSite = onSite;}
+    public void setLocation(String location){this.location=location;}
 }
