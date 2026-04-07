@@ -95,7 +95,22 @@ export default function CwCard({ //recieved all state and handles from index
   cancelEditing,editOnSite, setEditOnSite,
   editLocation,setEditLocation,deleteCw,
   //toggle complete, save edit, start/cancel editing
+
+
+
 }:Props){
+
+    const orderedCw = [...coursework].sort((a,b) =>{
+        const aComplete = !!a.completed;
+        const bComplete = !!b.completed;
+
+        if (aComplete != bComplete){
+            return aComplete ? 1: -1;//incomplete cw comes before complete cw
+        }
+
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();  //for both, earliest due date first
+    });
+
     return (
     <>
           {/*Add cw */}
@@ -184,6 +199,7 @@ export default function CwCard({ //recieved all state and handles from index
             <View style = {{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10}}>
                 <Text style={styles.label}>On-site assessment?</Text>
                 <Switch value={cwOnSite} onValueChange={setCwOnSite}/>
+                {/*toggle for onsite for cw items/exams whatever*/}
             </View>
 
             {cwOnSite &&(
@@ -209,7 +225,7 @@ export default function CwCard({ //recieved all state and handles from index
             <Text style={styles.cardTitle}>Coursework</Text>
 
             <FlatList
-              data={coursework}
+              data={orderedCw}
               keyExtractor={(c) => String(c.id)}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -219,12 +235,13 @@ export default function CwCard({ //recieved all state and handles from index
                 const lvl = getReminderLevel(dl);
 
                 const isEditing = editingCwId === item.id;
+                const done = !!item.completed;
                 return (
 
-                  <View style={styles.itemCard}>
+                  <View style={[styles.itemCard,  done && styles.itemCardCompleted]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.itemTitle}>{item.title}</Text>
-                      <Text style={styles.muted}>
+                      <Text style={[styles.itemTitle, done && styles.completedText]}>{item.title}</Text>
+                      <Text style={[styles.muted, done && styles.completedMuted]}>
                         Due: {item.dueDate} • Module: {item.moduleId} • Weight: {item.weighting ?? "n/a"}%
                         {item.scorePercent != null ? `•Mark: ${item.scorePercent}%` : ""}
                       </Text>
@@ -237,7 +254,7 @@ export default function CwCard({ //recieved all state and handles from index
                         (() => {
                           return (
 
-                            <Text style={styles.muted}>
+                            <Text style={[styles.muted, done && styles.completedMuted]}>
                               Reminder: {lvl.label} ({lvl.freq})
                             </Text>
 
@@ -257,6 +274,7 @@ export default function CwCard({ //recieved all state and handles from index
                             placeholderTextColor="#555"
                           />
 
+                          {/*editing date picker*/}
                           <Text style={styles.editLabel}>Due date</Text>
                           <Pressable onPress={() => setEditDP(true)} style={styles.editInput}>
                             <Text style = {{ color : "white" }}>
@@ -264,6 +282,7 @@ export default function CwCard({ //recieved all state and handles from index
                             </Text>
                           </Pressable>
 
+                          {/*editng time picker*/}
                           <Text style={styles.editLabel}>Due timee</Text>
                           <Pressable onPress={() => setEditTP(true)} style={styles.editInput}>
                             <Text style = {{ color : "white" }}>
@@ -326,6 +345,10 @@ export default function CwCard({ //recieved all state and handles from index
                             placeholder= "e.g 65"
                             placeholderTextColor= "#555"
                           />
+                          <View style = {{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8}}>
+                            <Text style = {styles.editLabel}>On-site assessment</Text>
+                            <Switch value= {editOnSite} onValueChange={setEditOnSite}/>
+                          </View>
 
                           {editOnSite &&(
                             <>
@@ -407,5 +430,20 @@ const styles = StyleSheet.create({
   editLabel: { color: "#a9a9b6", fontSize: 12, fontWeight: "600" },//edit label
   editInput: { backgroundColor: "#0f0f14", borderWidth: 1, borderColor: "#2a2a3a", borderRadius: 10, padding: 10, color: "white", fontSize: 14 }, // inline edit input
 
+
+  //for completed cw in list
+  itemCardCompleted:{
+    backgroundColor: "#0d012",
+    borderColor: "#1c1c28",
+    opacity: 0.65,
+  },
+
+  completedText:{
+    color: "#9a9aaa",
+  },
+
+  completedMuted:{
+    color: "#6f6f7f",
+  },
 
 });
