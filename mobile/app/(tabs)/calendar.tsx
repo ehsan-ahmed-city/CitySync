@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, SafeAreaView, SectionList, Text, TextInput, View, Modal, Pressable,ScrollView } from "react-native";
+import { Alert, SafeAreaView, Text, View, Modal, Pressable,ScrollView, StyleSheet } from "react-native";
 import * as Calendar from "expo-calendar";
 import * as Notifications from "expo-notifications";
 
 
 import { getSelectedCalendarIds } from "@/lib/calendarPrefs";
 import { getUserId, authHeaders, API_BASE } from "@/lib/api";
+import UnifiedWeekView from "@/components/calendar/UnifiedWeekView";
 
-
-const CityCampDest = "City, University of London, Northampton Square, London EC1V 0HB";
+const CityCampDest = "City St George's, University of London, Northampton Square, London EC1V 0HB";
 
 //stores leave notification ids so we can cancel them on reload
 const leavenotif = "citysync.leaveSoonNotifIds.v1";
@@ -31,8 +31,8 @@ type CourseworkDto = {
   onSite: boolean;
   location: string | null;
 };
-
 type UnifiedItem = {
+//calendar or coursework items on cal view
   key: string;
   source: "timetable" | "coursework";
   title: string;
@@ -40,7 +40,9 @@ type UnifiedItem = {
   end: Date;
   location?: string;
   meta?: string;
+  onSite?: boolean;
 };
+
 
 type UserPrefDto ={
     homeAddress: string | null;
@@ -250,7 +252,8 @@ export default function CalendarScreen() {
   const [status, setStatus] = useState("idle");
   const [sections, setSections] = useState<{ title: string; data: UnifiedItem[] }[]>([]);
 
-  const weekStart = useMemo(() => startOfWeek(new Date()), []);
+  const [weekAnch, setWeekAnch] = useState(new Date());
+  const weekStart = useMemo(() => startOfWeek(weekAnch), [weekAnch]);
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
 
   const [buffer, setBuffer] = useState<number>(10);
@@ -265,7 +268,15 @@ export default function CalendarScreen() {
 
   const[selectedRoute,setSelectedRoute] = useState<travelDeets | null>(null);
   const[selectedRouteTitle,setSelectedRouteTitle] = useState("");
-  //stores sleected route and event title
+  //stores selected route and event title
+
+  function nextWeek(){//func so user can see next week
+    setWeekAnch((prev) => addDays(prev, 7));
+  }
+
+  function currentWeek(){
+    setWeekAnch(new Date());//goes back to current week
+  }
 
   useEffect(() => {
   (async () => {
@@ -296,8 +307,10 @@ export default function CalendarScreen() {
   }, []);
 
   async function openRouteDetails(item: UnifiedItem) {//activates when user taps the route detail button
-    if (item.source !== "timetable" && item.source !== "coursework") return;//only timetable items and one-site cw items have routes
-
+    if (
+    item.source !== "timetable" && !(item.source === "coursework" && item.onSite)){
+     return;//only timetable items and one-site cw items have routes
+    }
     if (!homeLocation || homeLocation.trim() === "") {
       Alert.alert("No home address", "set your home address in prefs first");
       //they gte an alert is home address isn't set
@@ -312,10 +325,13 @@ export default function CalendarScreen() {
 
       const targetDest = item.source === "coursework" ? (item.location?.trim() || destination) : destination;
 
-      const details = await fetchTravelDetails(//func to fetch route details form backend
+      const arrivalTime = item.source === "coursework" ? item.end.toISOString() : item.start.toISOString();//correct arrival time for backend
+                                                                                  //^start arrive at beginning of lecture
+
+       const details = await fetchTravelDetails(//func to fetch route details form backend
         homeLocation,
         targetDest,
-        item.start.toISOString()
+        arrivalTime
       );
 
       if (!details) {//if no data was returned
@@ -476,24 +492,9 @@ export default function CalendarScreen() {
         })
       );
 
-      if (scheduledNotifIds.length > 0) {
-        await AsyncStorage.setItem(leavenotif, JSON.stringify(scheduledNotifIds));
-      }
 
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
 
-//       Alert.alert(
-//         "Scheduled notifications",
-//         JSON.stringify(
-//           scheduled.map((n) => ({id: n.identifier, title: n.content.title,
-//             body: n.content.body,trigger: n.trigger,
-//           })),
-//           null,2
-//         ).slice(0, 1500)
-//       );
-
-      // const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      // console.log("[CitySync] scheduled notifications:", JSON.stringify(scheduled, null, 2));
 
       console.log("[CitySync] All scheduled:", JSON.stringify(scheduled, null, 2));
 
@@ -509,22 +510,24 @@ export default function CalendarScreen() {
       }
       const coursework = (await cwRes.json()) as CourseworkDto[];
 
-      const courseworkItems: UnifiedItem[] = await Promise.all(
+      const courseworkItems: UnifiedItem[] = await Promise.all( //cw items with travel and notificaiton info
         coursework.map(async (c) => {
-          const end = parseCwDate(c.dueDate); //typical due date time is 5pm
+          const end = parseCwDate(c.dueDate); //parsing actual deadline into js date
           const start = new Date(end);
           start.setMinutes(start.getMinutes() - 30);//show as a 30 min block
 
-          let leaveMeta = "";
-          let routeMeta = "";
+          let leaveMeta = "";//leave at txt
+          let routeMeta = "";//route: text
 
-          const location = c.onSite ? (c.location?.trim() || currentDest) : undefined;
+          const location = c.onSite ? (c.location?.trim() || currentDest) : undefined;//set location if cw/exam is on site
+          //fallback to uni campus destination of no custom loc
 
           if (c.onSite) {
+          //only travel time and leave soon notifs
 
-            const arrivalTime = end.toISOString();
+            const arrivalTime = end.toISOString();//cw arrival time is deadline
 
-            const liveTravelMins = await fetchTravelMins(
+            const liveTravelMins = await fetchTravelMins(//getting live travel time from backend
               currentHome,
               location ?? currentDest,
               arrivalTime
@@ -537,54 +540,57 @@ export default function CalendarScreen() {
               const leaveAt = calcLeaveTime(end, travelMins, bufferMins);
 
               const notifId = await scheduleLeaveSoonNotif(
+              //notification to tell user to leave
                 c.title,
                 leaveAt,
                 travelMins,
                 bufferMins
               );
 
-              if (notifId) {
+              if (notifId) {//stiore notif id to cancel it later
                 scheduledNotifIds.push(notifId);
               }
 
               leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
+              //building ui string for leave time
+                hour: "2-digit",minute: "2-digit",
               })}`;
 
-              const usedFallback = liveTravelMins == null;
+              const usedFallback = liveTravelMins == null;//whether fallback estimate was used
+
+              //route summary text built
               routeMeta = `Route: Home -> ${location ?? currentDest} (${travelMins} mins${usedFallback ? " est." : ""})`;
 
             } else {
-
-              routeMeta = "Set home address in preferences to get leave time";
+              routeMeta = "Set home address in preferences to get leave time";//cant calc travel
             }
           }
 
-          const metaParts = [
+          const metaParts = [//metadata string undereach item
             `Module ${c.moduleId}${c.weighting != null ? ` • ${c.weighting}%` : ""}`,
-            c.onSite ? "On-site" : "",
-            leaveMeta,
-            routeMeta,
-          ].filter(Boolean);
+            c.onSite ? "On-site" : "",leaveMeta,routeMeta,].filter(Boolean);
 
-          return {
+          return {//unified calender item
             key: `cw-${c.id}`,
             source: "coursework",
             title: c.title,
-            start,
-            end,
-            location,
+            start,end,
+            location,onSite: c.onSite,
             meta: metaParts.join(" • "),
           };
         })
       );
 
-      const merged = [...timetableItems, ...courseworkItems].filter(//merge and filter to only items in the week
+      if (scheduledNotifIds.length > 0) {//persists notf ids for timetable and cw
+        await AsyncStorage.setItem(leavenotif, JSON.stringify(scheduledNotifIds));
+      }
+
+      const merged = [...timetableItems, ...courseworkItems].filter(//merge tt and cw in a week list
         (it) => it.start >= weekStart && it.start < weekEnd
+        //only shows item in current week
       );
 
-      merged.sort((a, b) => a.start.getTime() - b.start.getTime());
+      merged.sort((a, b) => a.start.getTime() - b.start.getTime());//chronological order
 
       const byDay = new Map<string, UnifiedItem[]>();
       for (const it of merged) {
@@ -594,14 +600,15 @@ export default function CalendarScreen() {
         byDay.set(k, arr);
       }
 
+    //map converted to secionlist
       const newSections = Array.from(byDay.entries())
-        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .sort(([a], [b]) => (a < b ? -1 : 1))//days ascending
         .map(([day, data]) => ({
           title: day,
           data,
         }));
 
-      setSections(newSections);
+      setSections(newSections);//ui updates
 
       const notifNote = scheduledNotifIds.length > 0 ? ` • ${scheduledNotifIds.length} leave alerts set` : "";
       setStatus(`loaded ${merged.length} items${notifNote}`);
@@ -616,90 +623,20 @@ export default function CalendarScreen() {
   useEffect(() => {
   if (!prefsLoaded) return;
     loadUnifiedWeek();
-  }, [prefsLoaded]);
+  }, [prefsLoaded, weekStart.getTime()]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0b0b0f" }}>
-      <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 20, fontWeight: "600", color: "white" }}>Unified Week</Text>
-        <Text style={{ color: "#d6d6df" }}>Week: {ymd(weekStart)} to {ymd(addDays(weekStart, 6))}</Text>
-        <Text style={{ color: "#d6d6df" }}>Status: {status}</Text>
-
-        <Button title="Reload unified week" onPress={loadUnifiedWeek} />
-      </View>
-
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.key}
-        renderSectionHeader={({ section }) => (
-          <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#14141a" }}>
-            <Text style={{ fontWeight: "700", color: "white" }}>{section.title}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => {
-
-          const past = item.end.getTime() < Date.now();
-          //^dims events that have already finished
-
-          return (
-
-            // <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 }}>
-            <View
-              style={{paddingHorizontal: 16,paddingVertical: 10,borderBottomWidth: 1,backgroundColor: past ? "#101015" : "#0b0b0f",
-                borderBottomColor: "#262638",opacity: past ? 0.45 : 1,
-              }}
-            >
-
-              <Text style={{ fontWeight: "600", color: past ? "#7f7f8f" : "white" }}>
-                [{item.source === "timetable" ? "Lecture" : "Coursework"}] {item.title}
-              </Text>
-
-              <Text style={{ color: past ? "#7f7f8f" : "#d6d6df" }}>
-                {item.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
-                {item.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </Text>
-
-
-              {item.location ? (
-                <Text style={{ color: past ? "#6d6d7c" : "#a9a9b6" }}>
-                  Location: {item.location}
-                </Text>
-              ) : null}
-
-              {/* {item.meta ? <Text style={{ fontSize: 12, opacity: 0.75 }}>{item.meta}</Text> : null} */}
-              {item.meta ? (
-                <>
-                  {item.meta.split(" • ").map((part, i) => (
-                    <Text
-                      key={i}
-                      style={{fontSize: 12,color: past
-                          ? "#6d6d7c" : part.startsWith("Leave at") ? "#22C55E" : "#a9a9b6",
-                        marginTop: i === 0 ? 4 : 1,
-                      }}
-                    >
-                      {part}
-                    </Text>
-                  ))}
-                </>
-              ) : null}
-
-              {/*}only shows button for future timetable evnts*/}
-              {(item.source === "timetable" || item.source === "coursework") && !past ?(
-                <Pressable
-                    onPress={() => openRouteDetails(item)}
-                    style={{marginTop: 8 }}
-                >
-                 <Text style={{ color:"#9bc2f2", fontSize: 13}}>
-                    Show route details
-                 </Text>
-                </Pressable>
-              ):null}
-            </View>
-
-          );
-        }}
-        ListEmptyComponent={<Text style={{ padding: 16, color: "#d6d6df" }}>No items this week</Text>}
-      />
+    <SafeAreaView style={{flex:1, backgroundColor: "#0b0b0f"}}>
+            <UnifiedWeekView
+             weekStartLabel={ymd(weekStart)}
+             weekEndLabel={ymd(addDays(weekStart, 6))}
+             status={status}
+             sections={sections}
+             onCurrentWeek={currentWeek}
+             onNextWeek={nextWeek}
+             onReload={loadUnifiedWeek}
+             onOpenRouteDetails={openRouteDetails}
+             />
             <Modal
               visible={routeModalVisible}
               animationType="slide"
@@ -787,3 +724,4 @@ export default function CalendarScreen() {
     </SafeAreaView>
   );
 }
+
