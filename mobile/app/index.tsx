@@ -11,7 +11,7 @@ export default function Index() {
 
         async function decideRoute(){//async function for user's route
           try{
-            const uid = getUserId();
+            const uid = await getUserId();
             const hasOnboard = await AsyncStorage.getItem(`citysync.hasOnboarded.${uid}`);
 
             if(hasOnboard === "true"){

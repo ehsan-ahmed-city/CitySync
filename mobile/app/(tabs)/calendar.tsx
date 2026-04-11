@@ -413,7 +413,7 @@ export default function CalendarScreen() {
 
 
       //read saved calendar selection first, else fall back to all calendars
-      const savedIds = await getSelectedCalendarIds(USER_ID);
+      const savedIds = await getSelectedCalendarIds();
       let calIds: string[];
 
       if (savedIds && savedIds.length > 0) {
