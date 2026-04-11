@@ -1,15 +1,29 @@
 # CitySync
-My individual project CitySync is an intelligent student planner
+CitySync is a full-stack mobile app that acts as an intelligent student planner that integrates timetable events, coursework and real-time travel planning all together.
+
+The system consists of a React native mobile app that communicates with a Spring Boot backend API
+
+## Features
+1. Unified timetable combining device calendar and coursework
+2. Real-time travel time calculations using Google Routes API
+3. Leave-soon travel notifications based on travel + buffer times
+4. Coursework tracking with weightings and grade calculations
+5. Email-based authentication with verification codes
+
 Ehsan Ahmed
+
 Email: ehsan.ahmed@city.ac.uk
+
 Student id:220000786
+
 Consultant: Dr Panos Giannopoulos
 
 ## My stack
 
-Backend: Spring Boot, PostgreSQL and Java
-For mobile: Expo, react native and Typescript
-External APIs and services: Google Routes API, GMAIL SMTP (email server)
+Backend: Spring Boot Java,PostgreSQL
+Mobile: React native (Expo), Typescript
+APIs: Google Routes API
+Services: GMAIL SMTP (email server)
 
 ## Sturcture
 
@@ -17,22 +31,29 @@ External APIs and services: Google Routes API, GMAIL SMTP (email server)
 
 /mobile for Expo mobile App
 
-## Postgre sql setup
+## Prerequisites
 
-Create a postgresql database called citysync
+Node.js
 
-### create database 
-psql -U postgres
+Java 21
 
-Create DATABASE citysync;
+PostgreSQL
 
-\q
+Expo Go (on your mobile device)
 
-or you can do :
+## Database setup
+
+### Create a postgresql database called citysync:
 
 psql -U postgres -c "CREATE DATABASE citysync;"
 
-## setting up environment variables
+### and then import the schema:
+
+psql -U postgres -d citysync -f CitySync_Schema.sql
+
+## Setting up environment variables
+
+### Open up powershell before you run the backend and set your environment variables:
 
 $env:GOOGLE_ROUTES_KEY="yourroutes_api_key"
 
@@ -40,16 +61,9 @@ $env:MAIL_USER="you@gmail.com"
 
 $env:MAIL_PASS="your_app_password"
 
-### Importing the schema
-psql -U postgres -d citysync -f CitySync_Schema.sql
-
-or do full path: psql -U postgres -d citysync -f "C:\Users\whatever\CitySync\CitySync\CitySync_Schema.sql"
-
-The schema won't contain and user data, it'll create the required tables and contain that and the relationships/constraints.
 
 ## Setting up google Routes API
 
-CitySync use google routes api for travel time calculations. The backend should read the API key from GOOGLE_ROUTES_KEY
 
 To set up the API key:
 
@@ -57,41 +71,45 @@ To set up the API key:
 2. You have to setup and enable billing for the project
 3. Enable the routes API
 4. Create an API key
-5. Restrict the key to routes api only
+5. Restrict the key to Routes API only
 
 ## Gmail SMTP setup/app password
 
 CitySync uses gmail SMTP for sending emails with verification codes, the backend expects MAIL_USER and MAIL_PASS
 
+### SMTP Config
+
+enable 2FA on your gmail
+
+Generate app password
+
+use it as Mail_PASS in the environment variables step (scroll up)
+
 Host: smtp.gmail.com
 
 port: 587
 
-Use app password (not your real one)
-
-
-enable 2FA on your gmail
-
-Gneerate app password
-
-use it as Mail_PASS in the environment variables step (scroll up)
-
 
 ## Backend setup and run
 
+have the citysync directory open in powershell 
+
 cd backend
 
-./mvnw spring-boot:run   # mac/linux
+### windows
+.\mvnw.cmd spring-boot:run
 
-.\mvnw.cmd spring-boot:run  # windows
+### mac
+./mvnw spring-boot:run
 
-The backend defgault port is on http://localhost:8080
+
+The backend runs on:
+
+http://localhost:8080
 
 ## Mobile setup
 
-Open a powershell window and change directory to this:
-
-cd C:\Users\whatever\CitySync\CitySync
+Open another powershell window and change directory citysync
 
 cd mobile
 
@@ -103,47 +121,27 @@ npx expo start
 
 ### Get your local IP:
 ipconfig for windows
+
 ifconfig for mac
 
-The app uses a hardcoded backend URL in const API_BASE = "http://192.168.0.12:8080;"
+retrieve the value of the ipv4 (e.g. 192.168.0.12)
 
-Once you get your IP add colons and the 8080 port like: "http://IP.168.x.y:8080;"
+update mobile/lib/api.ts and change:
 
-and go into C:\Users\whatever\CitySync\CitySync\mobile\lib\api.ts and change the value of API_BASE to that.
+const API_BASE = "http://Your_IP:8080";
+
+The app uses a hardcoded backend URL in const API_BASE = "http://192.168.0.12:8080";
+
+Once you get your IPv4 add colons and the 8080 port like: const API_BASE = "http://IP.168.x.y:8080";
 
 
+## Running the app
 
-## Make sure the env variables are set
-If you're not doing it on an IDE like me, then go on powershell and cd to this:
-C:\Users\whatever\CitySync\CitySync\backend
-and set:
+Scan QR code with Expo Go
 
-$env:GOOGLE_ROUTES_KEY="your_routes_api_key"
+App should load login screen
 
-$env:MAIL_USER="your@gmail.com"
-
-$env:MAIL_PASS="your_app_password"
-
-## Starting up order
-
-### first terminal
-Again, if your running from an IDE then you can just open C:\Users\whatever\CitySync\CitySync\backend\src\main\java\com\citysync\backend and run BackendApplication.java.
-
-Else open power and have it in the project directory and then: cd .\backend
-
-set your environment variables
-
-.\mvnw.cmd spring-boot:run
-
-### in another terminal for the mobile app:
-
-cd .\mobile
-
-npm install
-
-npx expo start
-
-## Using and testing CitySync
+## CitySync Usage guide
 
 ### First time running the app
 
@@ -165,27 +163,27 @@ npx expo start
 3. set your leave buffer (which is the extra time you get before your lecture/tutorial)
 4. Save preferences
 
-### Testing calendar and leave alerts
+### Calendar features and leave alerts
 
-1. Go to the calender tab (2nd tab) and reload
+1. Go to the calendar tab (2nd tab) and reload
 2. Your lectures and tutorials should appear with leave times shown in green
 3. Show route details should show under each calendar item in blue and it'll show a screen giving you the directions to take to travel.
 4. The leave-soon notifications are scheduled automatically so they fire when the app is closed.
 
-### Testing coursework
+### Coursework
 
 1. Go to the modules tab and create a module
 2. Add a coursework with a title, due date and weighting
 3. There's an on-site toggle so that if it's a presentation or exam, it'll show up with route details on the timetable tab.
-4. You can use the dit button to enter a score % after recieving your mark, which will be used to calculate weightings.
+4. You can use the edit button to enter a score % after receiving your mark, which will be used to calculate weightings.
 5. Coursework will show up in the calendar tab, with on-site coursework items having route details alongside it
 
-### Logging out
+### Account features
 
-At the top of the modules tab, there's the log out button which will return you to the login screen.
+•At the top of the modules tab, there's the log out button which will return you to the login screen.
 
-### Deleting your account
+•In the settings tab (4th tab) ,near the bottom, there's a delete account button.
 
-In the settings tab (4th tab) ,near the bottom, there's a delete account button.
 If you click it, you'll be sent a 6 digit code again to your email for confirmation
+
 Enter it in the app and your user data will be deleted.
