@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class TAccountService {
+public class AccountService {
 
     private final UserRepo userRepo;
     private final UserPrefRepo userPrefRepo;
@@ -16,7 +16,7 @@ public class TAccountService {
     private final AuthCodeRepo authCodeRepo;
     private final AuthService authService;
 
-    public TAccountService(
+    public AccountService(
             UserRepo userRepo,
             UserPrefRepo userPrefRepo,
             ModuleRepository moduleRepo,

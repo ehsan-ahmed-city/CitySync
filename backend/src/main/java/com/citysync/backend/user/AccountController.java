@@ -8,9 +8,9 @@ import java.util.Map;
 @RequestMapping("/users")
 public class AccountController {
 
-    private final TAccountService accountService; //object in service layer for delete coount logic
+    private final AccountService accountService; //object in service layer for delete coount logic
 
-    public AccountController(TAccountService accountService){
+    public AccountController(AccountService accountService){
         this.accountService = accountService; //account service constructor
     }
 
