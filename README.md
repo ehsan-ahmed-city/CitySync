@@ -5,7 +5,7 @@ The system consists of a React native mobile app that communicates with a Spring
 
 ## Features
 1. Unified timetable combining device calendar and coursework
-2. Real-time travel time calculations using Google Routes API
+2. Real-time travel time estimations using Google Routes API based on arrival times
 3. Leave-soon travel notifications based on travel + buffer times
 4. Coursework tracking with weightings and grade calculations
 5. Email-based authentication with verification codes
@@ -25,11 +25,51 @@ Mobile: React native (Expo), Typescript
 APIs: Google Routes API
 Services: GMAIL SMTP (email server)
 
-## Sturcture
+## Project Structure
+
+Project structure is organised into 2 main components whihc is a backend API and mobile application.
+
+### Root Directory
+CitySync_Schema.sql is a PostgreSQL schema used to initialise the database.
+
+README.md includes the setup instructions and project overview
 
 /backend for Spring Boot API
 
 /mobile for Expo mobile App
+
+
+### Backend
+
+Spring Boot REST API for decision lofic, authentication and external API integration.
+
+#### src/main/java/com/citysync/backend/:
+
+auth/ is for email verification and authentication logic
+
+user/ is for user entity and data access
+
+coursework/ is for coursework management such as CRUD,weightings and logic
+
+module/ is for module management
+
+travel/ is for integration with Google Routes API
+
+src/main/resources/application.properties contains the backend configuration such as database, email and API keys
+
+
+#### Mobile /mobile
+
+app/ has the main screens using Expo router such as tabs, onboarding
+
+components/ are reusable components such as buttons and cards
+
+lib/ has helper functions such as API calls and travel logic
+
+assets/ has images/icons that come with React
+
+app.json has Expo configurations
+
 
 ## Prerequisites
 
