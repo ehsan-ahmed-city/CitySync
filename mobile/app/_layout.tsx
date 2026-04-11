@@ -1,9 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
@@ -21,9 +22,11 @@ function AppGate() {
   const colorScheme = useColorScheme();
   const { auth, login} = useAuth();
 
+
   useEffect(() => {SplashScreen.hideAsync();}, []);//hides once layout has mounted
 
-  if (auth.status === 'loading') {//loading spinner while auth state is resorted/loading
+
+  if (auth.status === 'loading'){//loading spinner while onboarding checked
     return (
       <View style={{ flex: 1, backgroundColor: '#0b0b0f', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator color="#D70E20" size="large" />
@@ -40,6 +43,7 @@ function AppGate() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         {/*main tab app screen*/}
+        <Stack.Screen name = "onboarding" options ={{ headerShown: false}}/>
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen name="+not-found" />
         {/*fallback screen for any other outes*/}

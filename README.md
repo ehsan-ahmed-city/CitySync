@@ -136,3 +136,50 @@ cd .\mobile
 npm install
 
 npx expo start
+
+## Using and testing CitySync
+
+### First time running the app
+
+1. Open the app and you'll see the login screen
+2. Enter your city email and tap the send code button
+3. Check your email for the 6 digit code and enter it
+4. You'll remain logged in as your session persists, you won't need to login again unless you logout
+
+### Setting up your timetable
+
+1. Subscribe to your myTimetable ICS in your device calendar (such as Apple calendar), this done once via: https://mytimetable.city.ac.uk/help
+2. In CitySync go to the calendar picker tab (3rd tab) and select your city timetable calendar.
+3. Save selection on the top
+
+### Setting up travel
+
+1. Go to settings tab (4th tab)
+2. enter your home address
+3. set your leave buffer (which is the extra time you get before your lecture/tutorial)
+4. Save preferences
+
+### Testing calendar and leave alerts
+
+1. Go to the calender tab (2nd tab) and reload
+2. Your lectures and tutorials should appear with leave times shown in green
+3. Show route details should show under each calendar item in blue and it'll show a screen giving you the directions to take to travel.
+4. The leave-soon notifications are scheduled automatically so they fire when the app is closed.
+
+### Testing coursework
+
+1. Go to the modules tab and create a module
+2. Add a coursework with a title, due date and weighting
+3. There's an on-site toggle so that if it's a presentation or exam, it'll show up with route details on the timetable tab.
+4. You can use the dit button to enter a score % after recieving your mark, which will be used to calculate weightings.
+5. Coursework will show up in the calendar tab, with on-site coursework items having route details alongside it
+
+### Logging out
+
+At the top of the modules tab, there's the log out button which will return you to the login screen.
+
+### Deleting your account
+
+In the settings tab (4th tab) ,near the bottom, there's a delete account button.
+If you click it, you'll be sent a 6 digit code again to your email for confirmation
+Enter it in the app and your user data will be deleted.

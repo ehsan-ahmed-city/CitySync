@@ -1,10 +1,16 @@
 import React, {useState} from "react";
-import {View, Text, Pressable, StyleSheet} from "react-native";
+import {View, Text, Pressable, StyleSheet, Linking, Alert} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {router} from "expo-router";
 import {PrimBtn, SecBtn} from "@/components/home/ActionBtns"
+import {getUserId} from "@/lib/api";
 
-const storageKey = "citysync_has_onboarded";
+// const storageKey = "citysync_has_onboarded";
+
+async function markOnboarded(){//for each user onboarding separate
+    const uid = await getUserId();
+    await AsyncStorage.setItem(`citysync.hasOnboarded.${uid}`, "true");
+}
 
 type Step = 0 | 1 | 2 | 3;
 
@@ -13,22 +19,22 @@ with multiple steps so they can navigate if they;re using the app for the first 
 
 
 export default function OnBoardingScreen() {
-    const [Step, setStep] = useState<Step>(0);
+    const [step, setStep] = useState<Step>(0);
 
     async function finOnboard(){
-        await AsyncStorage.setItem(storageKey, "true");
+        await markOnboarded();
         router.replace("/(tabs)");
     }
 
     function nextStep(){
-        if(Step < 3){
+        if(step < 3){
             setStep((prev) => (prev +1) as Step);
         }
 
     }
 
     function renderStep() {
-        switch(Step){
+        switch(step){
         case 0:
             return(
                 <>
@@ -48,15 +54,27 @@ export default function OnBoardingScreen() {
                 <>
                     <Text style={styles.title}> Connect your timetable</Text>
                     <Text style ={styles.body}>
-                        CitySync reads timetable events from the calendars on your phone.
+                        CitySync reads timetable events from the calendars on your phone. To get started, subscribe to your City's timetable ICS feed
                     </Text>
+                    <Text style = {styles.bullet}>1. Tap the link below to open the myTimetable setup page</Text>
+                    <Text style = {styles.bullet}> Follow the instructions to subscribe to your timetable in your phone's calendar </Text>
+                    <Text style = {styles.bullet}> Come back and select it in CitySync </Text>
                     <Text style = {styles.bullet}> •Subscribe to your city timetable in your phone calendar</Text>
-                    <Text style = {styles.bullet}> Then choose that calendar in citysync</Text>
+                    <Text style = {styles.bullet}> Then choose that calendar in CitySync</Text>
 
-                    <Text style = {styles.bullet}> •Get reminders before deadlines</Text>
-                    <PrimBtn title = "Select calendars" onPress={() => router.push("/(tabs)/calendarSettings")}/>
+                    <Pressable style ={styles.linkBtn} onPress={() =>
+                        Linking.openURL("https://mytimetable.city.ac.uk/help").catch(() =>
+                            Alert.alert("Couldn't open link","Visit https://mytimetable.city.ac.uk/help on your browser."))
+                    }>
+
+                    <Text style = {styles.linkText}> Open my timetable help </Text>
+                    </Pressable>
+
+                    <View styles={styles.btnGap}>
+
+                    <PrimBtn title = "Select my uni calendar" onPress={() => router.push("/(tabs)/calendarSettings")}/>
                     <SecBtn title = "I'll do this later" onPress={nextStep}/>
-
+                    </View>
                 </>
             );
         case 2:
@@ -109,4 +127,19 @@ const styles = StyleSheet.create({
     bullet: {
         fontSize: 14, marginBottom: 8,color: "white",
     },
+
+    linkBtn:{
+    marginTop: 8,marginBottom: 4,
+    paddingVertical: 12,paddingHorizontal: 16,
+    backgroundColor:"#1e1e30",
+    borderRadius: 10, borderWidth: 1, borderColor: "#1e1e30",
+    alignItems: "center",
+    },
+
+    linkText:{
+    color:"#3b4adb", fontWeight:"700",
+    fontSize:14,},
+
+    btnGap:{marginTop: 16, gap: 10,},
+
 });

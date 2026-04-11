@@ -2,21 +2,25 @@ import React, { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import {getUserId} from "@/lib/api";
 
-const storageKey = "citysync_has_onboarded";//key to flag is user completes onboarding
+// const storageKey = "citysync_has_onboarded";//key to flag is user completes onboarding
 
 export default function Index() {
     useEffect(() => {
 
-        async function decideRoute(){
-        //^Async function for user's route
-            const hasOnboard = await AsyncStorage.getItem(storageKey);
+        async function decideRoute(){//async function for user's route
+          try{
+            const uid = getUserId();
+            const hasOnboard = await AsyncStorage.getItem(`citysync.hasOnboarded.${uid}`);
 
             if(hasOnboard === "true"){
                 router.replace("/(tabs)");//if onboarding done already then go to tabs
             } else {
-                router.replace("/onboarding");
-            }
+                router.replace("/onboarding");}
+          }catch{
+            router.replace("/onboarding");
+          }
         }
 
         decideRoute();

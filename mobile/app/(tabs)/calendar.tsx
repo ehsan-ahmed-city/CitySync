@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, SafeAreaView, Text, View, Modal, Pressable,ScrollView, StyleSheet } from "react-native";
+import { Alert, SafeAreaView, Text, View, Modal, Pressable,ScrollView, StyleSheet, Switch } from "react-native";
 import * as Calendar from "expo-calendar";
 import * as Notifications from "expo-notifications";
 
@@ -7,11 +7,14 @@ import * as Notifications from "expo-notifications";
 import { getSelectedCalendarIds } from "@/lib/calendarPrefs";
 import { getUserId, authHeaders, API_BASE } from "@/lib/api";
 import UnifiedWeekView from "@/components/calendar/UnifiedWeekView";
+import {getOnSiteToday, setOnSiteToday} from "@/lib/onSitePrefs";
 
 const CityCampDest = "City St George's, University of London, Northampton Square, London EC1V 0HB";
 
 //stores leave notification ids so we can cancel them on reload
 const leavenotif = "citysync.leaveSoonNotifIds.v1";
+
+const getReadyMins=20; //20 min buffer before leave time
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -193,59 +196,68 @@ async function cancelAllLeaveSoonNotifs() {
   }
 }
 
-async function scheduleLeaveSoonNotif(
-  eventTitle: string,
-  leaveAt: Date,
-  travelMins: number,
-  bufferMins: number
-) {
-  //dont schedule if time already passed (or is basically now)
-  if (leaveAt.getTime() <= Date.now()) {
-    console.log(
-      `[CitySync] skipped leave notif for "${eventTitle}", leave time already passed`
-    );
-    return null;
-  }
-
-  try {
-
+async function ensureNotifPerms(): Promise<boolean>{
     let perms = await Notifications.getPermissionsAsync();
+        if (!perms.granted){
+        perms = await Notifications.requestPermissionsAsync();}
 
-    if (!perms.granted) {
-      perms = await Notifications.requestPermissionsAsync();
-    }
+        return perms.granted;
+}
 
-    if (!perms.granted) {
-      console.log("[CitySync] notifications NOT granted");
-      return null;
-    }
+async function scheduleTravelNotifs(
+    eventTitle: string,
+    leaveAt: Date,
+    travelMins: number,
+    bufferMins: number,
+    skip: boolean
 
-    console.log(
-      `[CitySync] Scheduling leave notif for "${eventTitle}" at ${leaveAt.toISOString()}, now is ${new Date().toISOString()}`
-    );
+): Promise<string[]>{
+    if (skip) return [];
 
-    const id = await Notifications.scheduleNotificationAsync({
+    const granted = await ensureNotifPerms();
+    if(!granted) return [];
 
-      content: {
+    const ids: string[]=[];
+    const now = Date.now();
 
-        title: "CitySync: Time to leave!",
-        body: `Leave now for "${eventTitle}" — ${travelMins} min journey + ${bufferMins} min buffer`,
-        data: { type: "leave_soon", eventTitle },
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: leaveAt, //activates at leaveAt Date
-      },
-    });
+    const getReadyAt = new Date(leaveAt.getTime()- getReadyMins * 60_000);
+    //fires before leave time
 
-    console.log(`[CitySync] Scheduled notif id: ${id}`);
-    return id;
+    if(getReadyAt.getTime() > now){
+        try{const id = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "CitySync: Get Ready!",body:`leave for "${eventTitle}" in ${getReadyMins} minutes, get ready now.`,
+                data: {type: "get_ready", eventTitle},
+            },trigger:{
+                type: "date" as const, date: getReadyAt,
+            },
+            });
 
-  } catch (e) {
+            ids.push(id);
+            console.log(`CitySync get ready notf for "${eventTitle}" at ${getReadyAt.toISOString()}`);
+            }catch(e){
+                console.log(`[CitySync] get ready schedule failed:`, e);
+            }//for debug
+        }
 
-    console.log(`[CitySync] Failed to schedule notif for "${eventTitle}":`, e);
-    return null;
-  }
+    if (leaveAt.getTime() > now) {
+      try {
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "CitySync: Time to leave!",
+            body: `Leave now for "${eventTitle}" — ${travelMins} min journey + ${bufferMins} min buffer`,
+            data: { type: "leave_soon", eventTitle },
+          },
+          trigger: {type: "date" as const,date: leaveAt,},
+        });
+
+        ids.push(id);
+        console.log(`[CitySync] leave notif for "${eventTitle}" at ${leaveAt.toISOString()}`);
+      } catch (e) {
+        console.log(`[CitySync] leave schedule failed:`, e)}
+    }//debugging again
+
+    return ids;
 }
 
 export default function CalendarScreen() {
@@ -262,6 +274,7 @@ export default function CalendarScreen() {
   //default destination city camppus but can be changed in prefs
 
   const [prefsLoaded, setPrefsLoaded] = useState(false);//stops calendar form loading until prefs are ready
+  const [onSiteMode, setOnSiteMode] = useState(false);//on-site toggle,resets daily
 
   const[routeModalVisible, setRouteModalVisible] = useState(false);//toggling route modal screen
   const[routeLoading, setRouteLoading] = useState(false);//show loading state while fetching route
@@ -276,6 +289,12 @@ export default function CalendarScreen() {
 
   function currentWeek(){
     setWeekAnch(new Date());//goes back to current week
+  }
+
+  async function handleOnSiteToggle(value: boolean){//toggle for on site si bitifs are reloaded
+    setOnSiteMode(value);
+    await setOnSiteToday(value);
+    await loadUnifiedWeek();
   }
 
   useEffect(() => {
@@ -297,6 +316,7 @@ export default function CalendarScreen() {
         setHomeLocationState(prefs.homeAddress ?? "");
         //^no leave time notif if home address not set
         setDestination(prefs.UniLoc?.trim() || CityCampDest);//use destination if present but uni campus as fallback
+        setOnSiteMode(await getOnSiteToday());//load todays on-site state
     } catch{
         //default if pref loading fails
     } finally{
@@ -365,7 +385,7 @@ export default function CalendarScreen() {
 
       if (prefsRes.ok) {
         const prefs = (await prefsRes.json()) as UserPrefDto;
-        ///response to uderpref dto using await for async prarse
+        ///response to userpref dto using await for async parse
 
         currentBuffer = prefs.bufferMins ?? 10;
         currentHome = prefs.homeAddress ?? "";
@@ -378,6 +398,9 @@ export default function CalendarScreen() {
         //react state updates for ui
       }
 
+      const onSite = await getOnSiteToday();
+      setOnSiteMode(onSite);//reread in case stored day changed
+
       const perm = await Calendar.requestCalendarPermissionsAsync();
       if (perm.status !== "granted") {
         Alert.alert("Calendar permission needed", "Enable calendar permission to import timetable events.");
@@ -388,11 +411,9 @@ export default function CalendarScreen() {
       setStatus("loading device calendar events...");
       const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
-      //read from all visible calendars
-      // const calIds = calendars.map((c) => c.id);
 
       //read saved calendar selection first, else fall back to all calendars
-      const savedIds = await getSelectedCalendarIds();
+      const savedIds = await getSelectedCalendarIds(USER_ID);
       let calIds: string[];
 
       if (savedIds && savedIds.length > 0) {
@@ -404,8 +425,7 @@ export default function CalendarScreen() {
         if (calIds.length === 0) {
 
           calIds = calendars.map((c) => c.id);
-          setStatus("saved calendars unavailable, using all calendars...");
-          //^fallback if previously saved calendars were removed from device
+          setStatus("saved calendars unavailable, using all calendars...");//fallback if previously saved calendars were removed from device
 
         } else {
 
@@ -430,17 +450,6 @@ export default function CalendarScreen() {
       await cancelAllLeaveSoonNotifs();
 
 
-      let perms = await Notifications.getPermissionsAsync();
-
-      if (!perms.granted) {
-        perms = await Notifications.requestPermissionsAsync();
-      }
-
-      if (!perms.granted) {
-        console.log("[CitySync] notifications not granted");
-        return;
-      }
-
       const scheduledNotifIds: string[] = [];
 
       const { default: AsyncStorage } = await import("@react-native-async-storage/async-storage");
@@ -454,6 +463,9 @@ export default function CalendarScreen() {
           let leaveMeta = "";
           let routeMeta = "";
 
+          if(onSite){
+            routeMeta = "on site mode-travel alerts paused for today :D";
+          }else{
           //fixed destination so travel should be Home to City campus
           const eventArrivalTime =start.toISOString();
 
@@ -463,11 +475,9 @@ export default function CalendarScreen() {
           if (travelMins != null) {
             const leaveAt = calcLeaveTime(start, travelMins, bufferMins);
 
-            const notifId = await scheduleLeaveSoonNotif(e.title ?? "Lecture",leaveAt, travelMins,bufferMins);
+            const notifIds = await scheduleTravelNotifs(e.title ?? "Lecture",leaveAt, travelMins,bufferMins, false);
 
-            if (notifId) {
-              scheduledNotifIds.push(notifId);
-            }
+            scheduledNotifIds.push(...notifIds);
 
             leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
@@ -479,24 +489,21 @@ export default function CalendarScreen() {
           }
 
           // const calMeta = e.calendarId ? `Calendar: ${e.calendarId}` : "";
+
+          }
           const calName = calendars.find((c) => c.id === e.calendarId)?.title ?? e.calendarId;
           const calMeta = calName ? `Calendar ${calName}` : "";
           //^shows which selected calendar the event came from
 
           const meta = [leaveMeta, routeMeta, calMeta].filter(Boolean).join(" • ") || undefined;
 
-          return {
-
-            key: `tt-${e.id}`,source: "timetable", title: e.title ?? "(no title)",start,end,location,meta,
-          };
+          return {key: `tt-${e.id}`,source: "timetable", title: e.title ?? "(no title)",start,end,location,meta,};
         })
       );
 
 
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-
-
-      console.log("[CitySync] All scheduled:", JSON.stringify(scheduled, null, 2));
+//       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+//       console.log("[CitySync] All scheduled:", JSON.stringify(scheduled, null, 2));
 
       setStatus("loading coursework from backend...");
       const cwRes = await fetch(`${API_BASE}/users/${USER_ID}/coursework`, {
@@ -539,17 +546,16 @@ export default function CalendarScreen() {
               //use END time for coursework arrival, not the visual block start
               const leaveAt = calcLeaveTime(end, travelMins, bufferMins);
 
-              const notifId = await scheduleLeaveSoonNotif(
-              //notification to tell user to leave
+              const notifIds = await scheduleTravelNotifs(
+              //notification to tell user to leave and cw on site alerts fire even if lecture paused
                 c.title,
                 leaveAt,
                 travelMins,
-                bufferMins
+                bufferMins,
+                onSite
               );
 
-              if (notifId) {//stiore notif id to cancel it later
-                scheduledNotifIds.push(notifId);
-              }
+              scheduledNotifIds.push(...notifIds);
 
               leaveMeta = `Leave at ${leaveAt.toLocaleTimeString([], {
               //building ui string for leave time
@@ -610,7 +616,7 @@ export default function CalendarScreen() {
 
       setSections(newSections);//ui updates
 
-      const notifNote = scheduledNotifIds.length > 0 ? ` • ${scheduledNotifIds.length} leave alerts set` : "";
+      const notifNote = scheduledNotifIds.length > 0 ? ` • ${scheduledNotifIds.length} alerts set` : "";
       setStatus(`loaded ${merged.length} items${notifNote}`);
       //travel source is not one val for whole screen, some are now live, others fallback
 
@@ -627,6 +633,23 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor: "#0b0b0f"}}>
+          <View style={s.onSiteStrip}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.onSiteLabel}>On site today</Text>
+              <Text style={s.onSiteHint}>
+                {onSiteMode
+                  ? "Travel alerts paused for lectures and on-site submissions today; deadline reminers are unaffected!"
+                  : "Toggle on if you're already at campus, pauses lecture travel alerts for today only"}
+              </Text>
+            </View>
+
+            <Switch
+              value={onSiteMode}
+              onValueChange={handleOnSiteToggle}
+              trackColor={{ false: "#2a2a3a", true: "#ffffff" }}
+              thumbColor="#fff"
+            />
+          </View>
             <UnifiedWeekView
              weekStartLabel={ymd(weekStart)}
              weekEndLabel={ymd(addDays(weekStart, 6))}
@@ -690,22 +713,22 @@ export default function CalendarScreen() {
                               </Text>
                             ) : null}
 
-                            {step.lineName ? (<Text style={{ color: "#a9a9b6" }}>Line: {step.lineName}</Text>) : null}
+                            {step.lineName ? (<Text style={{ color: "#FFCD00" }}>Line: {step.lineName}</Text>) : null}
 
-                            {step.vehicleType ? (<Text style={{ color: "#a9a9b6" }}>Vehicle: {step.vehicleType}</Text> ) : null}
+                            {step.vehicleType ? (<Text style={{ color: "#FFCD00" }}>Vehicle: {step.vehicleType}</Text> ) : null}
 
-                            {step.departureStop ? (<Text style={{ color: "#a9a9b6" }}>From: {step.departureStop}</Text> ) : null}
+                            {step.departureStop ? (<Text style={{ color: "#FFCD00" }}>From: {step.departureStop}</Text> ) : null}
 
-                            {step.arrivalStop ? (<Text style={{ color: "#a9a9b6" }}>To: {step.arrivalStop}</Text>) : null}
+                            {step.arrivalStop ? (<Text style={{ color: "#FFCD00" }}>To: {step.arrivalStop}</Text>) : null}
 
-                            {step.headSign ? (<Text style={{ color: "#a9a9b6" }}>Direction: {step.headSign}</Text>) : null}
+                            {step.headSign ? (<Text style={{ color: "#FFCD00" }}>Direction: {step.headSign}</Text>) : null}
                           </View>
                         ))}
                       </ScrollView>
                     </>
                   ) : (
                     <Text style={{ color: "#d6d6df", marginTop: 16 }}>
-                      No route details loadde
+                      No route details loaded
                     </Text>
                   )}
 
@@ -725,3 +748,26 @@ export default function CalendarScreen() {
   );
 }
 
+const s = StyleSheet.create({
+  onSiteStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#13131f",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1e1e30",
+  },
+  onSiteLabel: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  onSiteHint: {
+    color: "#8888aa",
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+});
