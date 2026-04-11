@@ -23,8 +23,14 @@ Create a postgresql database called citysync
 
 ### create database 
 psql -U postgres
+
 Create DATABASE citysync;
+
 \q
+
+or you can do :
+
+psql -U postgres -c "CREATE DATABASE citysync;"
 
 ## setting up environment variables
 

@@ -1,6 +1,5 @@
 package com.citysync.backend.user;
 
-import com.citysync.backend.auth.AuthCode;
 import com.citysync.backend.auth.AuthService;
 import com.citysync.backend.auth.AuthCodeRepo;
 import com.citysync.backend.module.ModuleRepository;
@@ -9,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class AccountService {
+public class TAccountService {
 
     private final UserRepo userRepo;
     private final UserPrefRepo userPrefRepo;
@@ -17,7 +16,7 @@ public class AccountService {
     private final AuthCodeRepo authCodeRepo;
     private final AuthService authService;
 
-    public AccountService(
+    public TAccountService(
             UserRepo userRepo,
             UserPrefRepo userPrefRepo,
             ModuleRepository moduleRepo,
