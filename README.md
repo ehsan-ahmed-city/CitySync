@@ -85,6 +85,8 @@ Expo Go (on your mobile device)
 
 ### Create a postgresql database called citysync:
 
+Make sure you're in the root directory where CitySync_Schema.sql is located, before running the import command.
+
 psql -U postgres -c "CREATE DATABASE citysync;"
 
 ### and then import the schema:

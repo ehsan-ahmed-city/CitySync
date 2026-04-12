@@ -49,11 +49,12 @@ export default function LoginScreen({ onLogin }: Props) {
 
   //validation before making verif req
     const trimmedCode = code.trim();
+    const trimmedEmail = sentTo.trim().toLowerCase();
     if (trimmedCode.length !== 6) { Alert.alert("invalid code", "please enter the 6 digit code from your email");
       return;
     }
 
-    if(!trimmed.includes("@") || !trimmed.includes(".")){
+    if(!trimmedEmail.includes("@") || !trimmedEmail.includes(".")){
         Alert.alert("Invalid email","Please enter a valid email");
         return;
     }
@@ -64,7 +65,7 @@ export default function LoginScreen({ onLogin }: Props) {
 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: sentTo, code: trimmedCode }),
+        body: JSON.stringify({ email: trimmedEmail, code: trimmedCode }),
 
       });
       const json = await res.json();
