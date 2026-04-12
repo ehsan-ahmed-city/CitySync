@@ -27,7 +27,7 @@ Services: GMAIL SMTP (email server)
 
 ## Project Structure
 
-Project structure is organised into 2 main components whihc is a backend API and mobile application.
+Project structure is organised into 2 main components which is a backend API and mobile application.
 
 ### Root Directory
 CitySync_Schema.sql is a PostgreSQL schema used to initialise the database.
@@ -41,7 +41,7 @@ README.md includes the setup instructions and project overview
 
 ### Backend
 
-Spring Boot REST API for decision lofic, authentication and external API integration.
+Spring Boot REST API for decision logic, authentication and external API integration.
 
 #### src/main/java/com/citysync/backend/:
 
@@ -92,6 +92,21 @@ psql -U postgres -c "CREATE DATABASE citysync;"
 ### and then import the schema:
 
 psql -U postgres -d citysync -f CitySync_Schema.sql
+
+### "psql not recognised" error
+
+ig you get an error like : "psql is not recognised as a command"
+
+then this means that PostgreSQL is not added to your system path.
+
+To fix this on windows:
+
+1. Open up: Program Files\PostgreSQL\17\bin (number is different depending on your version)
+2. Copy that path
+3. Press the windows button and search for environment variables
+4. Edit the "Path" variable on the upper window
+5. Add the PostgreSQL bin directory by pasting it
+6. Restart powershell
 
 ## Setting up environment variables
 
@@ -159,11 +174,15 @@ npm install
 
 npx expo start
 
+If port 8081 is already in use, expo will prompt that it's being used by another process.
+
+You can press 'Y' to use another port like 8082 and it will run the app normally
+
 ## Local config
 
 ### Local configuration:
 
-CitySync automaticallt detects your backend computer LAN IP when running Expo Go.
+CitySync automatically detects your backend computer LAN IP when running Expo Go.
 
 requirements:
 The backend must be running, it's configured to run on port 8080

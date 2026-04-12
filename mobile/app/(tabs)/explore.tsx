@@ -160,7 +160,7 @@ const {logout} = useAuth();
         "Delete account?",
         "This will remove your CitySync account and associated stored data. Do you want to continue?",
         [{
-            text: "No nvm",
+            text: "No, nevermind",
             style: "cancel",
           },
           {
