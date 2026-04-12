@@ -159,20 +159,16 @@ npx expo start
 
 ## Local config
 
-### Get your local IP:
-ipconfig for windows
+### Local configuration:
 
-ifconfig for mac
+CitySync automaticallt detects your backend computer LAN IP when running Expo Go.
 
-retrieve the value of the ipv4 (e.g. 192.168.0.12)
+requirements:
+The backend must be running, it's configured to run on port 8080
 
-update mobile/lib/api.ts and change:
+The mobile device and computer must be on the same wifi network
 
-const API_BASE = "http://Your_IP:8080";
-
-The app uses a hardcoded backend URL in const API_BASE = "http://192.168.0.12:8080";
-
-Once you get your IPv4 add colons and the 8080 port like: const API_BASE = "http://IP.168.x.y:8080";
+The app should be launched using "npx expo start" ,then scanning the QR code which opens Expo Go.
 
 
 ## Running the app

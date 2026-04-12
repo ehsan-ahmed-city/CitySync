@@ -1,6 +1,23 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
-export const API_BASE = "http://192.168.0.12:8080";
+
+function getApiBase(): string{
+//func to determine backend url when running expo go
+
+    const hostUri = Constants.expoConfig?.hostUri;//expo provides dev server address during expo start
+
+    if(hostUri){
+        const host = hostUri.split(":")[0];//to extract ip address
+
+        return `http://${host}:8080`;//use the ip pointing to backend port for spring boot
+
+    }
+
+    return "http://localhost:8080";
+}
+
+export const API_BASE = getApiBase();
 
 const AUTH_KEY = "citysync.userId.v1";
 
