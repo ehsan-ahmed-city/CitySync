@@ -6,10 +6,10 @@ import HeaderCard from "@/components/home/HeaderCard";
 import { PrimBtn, SecBtn, DangerBtn } from "@/components/home/ActionBtns";
 import type {CourseworkDto} from "@/lib/CwHelpers";
 import GradeCard from "@/components/home/GradeCard";
-import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet,} from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet,View, Text} from "react-native";
 import ModuleCard from "@/components/home/ModuleCard";
 import CwCard from "@/components/home/CwCard";
-import { getModuleWeightTotal, formatDate, } from "@/lib/CwHelpers"
+import { getModuleWeightTotal, formatDate, calcGrade, gradeLabel, gradeColour} from "@/lib/CwHelpers"
 
 
 import {checkNotifPerms, scheduleCourseworkReminders, cancelCourseworkReminders} from "../../src/notifications/cwReminders";
@@ -522,6 +522,34 @@ export default function HomeScreen() {
     };
   }, [modules.length, coursework]);
 
+  const overallGrade = useMemo(() => {
+      let weightedSum = 0;
+      let totalCredits = 0;
+
+      for (const module of modules){
+        if(module.credits == null || module.credits <= 0) continue;
+          //skips modules with no credit values
+
+        const cwForModule= coursework.filter((c) => c.moduleId === module.id);
+        const grade = calcGrade(cwForModule);
+
+        if(!grade) continue;
+        //skip if no grading info
+
+        if(grade.remainingWeight !== 0) continue;//onlw includes modules where all allocated cw is complete
+
+      weightedSum += grade.confirmedMark * module.credits;
+      totalCredits += module.credits;
+    }
+
+    if(totalCredits === 0) return null;
+
+    const percent = Math.round((weightedSum/totalCredits) *100)/100;
+
+    return{percent, creditsUsed: totalCredits,};
+
+    }, [modules, coursework]);
+
   //on screen load fetch both lists
   useEffect(() => {
     loadModules();
@@ -539,6 +567,32 @@ export default function HomeScreen() {
             onRefresh={() => { loadModules(); loadCoursework(); }}
             onLogout={logout}
           />
+
+      <View style={{
+        padding: 16, borderRadius: 18, backgroundColor:"#14141a", borderWidth:1, borderColor:"#232331",alignItems: "center",gap:6,
+      }}>
+
+      <Text style={{color: "#d6d6df", fontSize: 14, fontWeight:"700",}}> Overall confirmed grade</Text>
+
+      {overallGrade ?(
+        <>
+            <Text style = {{fontSize: 30, fontWeight: "800", color: gradeColour(Math.round(overallGrade.percent))}}>
+                {overallGrade.percent}%
+            </Text>
+
+            <Text style = {{fontSize: 14, fontWeight: "700", color: gradeColour(Math.round(overallGrade.percent)),}}>
+                {gradeLabel(Math.round(overallGrade.percent))}
+            </Text>
+
+            <Text style={{ color: "#a9a9b6", fontSize:12, textAlign: "center",}} >
+                Based on fully completed modules only, {overallGrade.creditsUsed} credits included
+            </Text>
+          </>
+          ):(<Text style={{color: "#a9a9b6", fontSize: 12, textAlign: "center",}}>
+            No confirmed overall grade yet, complete and grade coursework in at least one module.
+            </Text>
+      )}
+    </View>
 
           <ModuleCard
             modules={modules}
