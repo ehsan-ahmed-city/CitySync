@@ -95,28 +95,18 @@ psql -U postgres -d citysync -f CitySync_Schema.sql
 
 ### "psql not recognised" error
 
-ig you get an error like : "psql is not recognised as a command"
+If you get an error like : "psql is not recognised as a command"
 
 then this means that PostgreSQL is not added to your system path.
 
 To fix this on windows:
 
-1. Open up: Program Files\PostgreSQL\17\bin (number is different depending on your version)
+1. Find your Postgresql bin folder, like: Program Files\PostgreSQL\17\bin (number is different depending on your version)
 2. Copy that path
 3. Press the windows button and search for environment variables
 4. Edit the "Path" variable on the upper window
 5. Add the PostgreSQL bin directory by pasting it
 6. Restart powershell
-
-## Setting up environment variables
-
-### Open up powershell before you run the backend and set your environment variables:
-
-$env:GOOGLE_ROUTES_KEY="yourroutes_api_key"
-
-$env:MAIL_USER="you@gmail.com"
-
-$env:MAIL_PASS="your_app_password"
 
 
 ## Setting up google Routes API
@@ -145,6 +135,18 @@ use it as Mail_PASS in the environment variables step (scroll up)
 Host: smtp.gmail.com
 
 port: 587
+
+## Setting up environment variables
+
+### Open up powershell before you run the backend and set your environment variables:
+
+These environment variables must be set in the same terminal session (project root directory) before starting the backend
+
+$env:GOOGLE_ROUTES_KEY="your_routes_api_key"
+
+$env:MAIL_USER="your@gmail.com"
+
+$env:MAIL_PASS="your_app_password"
 
 
 ## Backend setup and run
