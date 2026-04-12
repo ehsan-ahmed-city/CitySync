@@ -28,6 +28,17 @@ type Props = {
     onOpenRouteDetails: (item: UnifiedItem) => void;
 };
 
+function fmtSectionDate(ymd:string) : string {
+//function to add weekday on the unified calendar
+    const [y,m,d] = ymd.split("-").map(Number);//input string to year month day and then num
+
+    const date = new Date(y, m-1, d);
+
+    const weekDay = date.toLocaleDateString("en-GB", {weekday: "long"});//getting weekday name
+
+    return `${weekDay} • ${ymd}`;
+}
+
 export default function UnifiedWeekView({
     weekStartLabel,weekEndLabel,
     status,sections,
@@ -65,7 +76,7 @@ return(
         keyExtractor={(item) => item.key}
         renderSectionHeader={({ section }) => (
           <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#14141a" }}>
-            <Text style={{ fontWeight: "700", color: "white" }}>{section.title}</Text>
+            <Text style={{ fontWeight: "700", color: "white" }}>{fmtSectionDate(section.title)}</Text>
           </View>
         )}
         renderItem={({ item }) => {

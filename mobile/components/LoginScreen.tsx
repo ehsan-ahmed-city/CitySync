@@ -52,6 +52,12 @@ export default function LoginScreen({ onLogin }: Props) {
     if (trimmedCode.length !== 6) { Alert.alert("invalid code", "please enter the 6 digit code from your email");
       return;
     }
+
+    if(!trimmed.includes("@") || !trimmed.includes(".")){
+        Alert.alert("Invalid email","Please enter a valid email");
+        return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/auth/verify-code`, {
@@ -62,13 +68,13 @@ export default function LoginScreen({ onLogin }: Props) {
 
       });
       const json = await res.json();
-      if (!res.ok) {Alert.alert("verification failed", json.error ?? "incorect/expired code.");
+      if (!res.ok) {Alert.alert("error", "Can't sent verification cocde, check your entered email and try again");
         return;
       }
 
       //successful verf returns userId to pass into auth state
       onLogin(Number(json.userId));
-    } catch (e: any) {Alert.alert("Network error", String(e?.message ?? e));
+    } catch (e: any) {Alert.alert("Network error", "Can't connect to the backend, run it and try again");
     } finally {setLoading(false);}
   }
 

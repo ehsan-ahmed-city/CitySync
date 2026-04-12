@@ -56,7 +56,7 @@ export default function GradeCard({ moduleId, coursework }: { moduleId: number; 
             {gradeLabel(predictedMin)}
 
           </Text>
-          <Text style={gradeStyles.rangeHint}>Minimum{"\n"}(0% on rest)</Text>
+
         </View>
 
         <Text style={gradeStyles.rangeSep}>to</Text>
@@ -68,7 +68,7 @@ export default function GradeCard({ moduleId, coursework }: { moduleId: number; 
             {gradeLabel(predictedMax)}
           </Text>
 
-          <Text style={gradeStyles.rangeHint}>Maximum{"\n"}(100% on rest)</Text>
+
         </View>
       </View>
 

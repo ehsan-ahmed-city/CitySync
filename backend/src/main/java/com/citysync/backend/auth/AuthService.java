@@ -11,6 +11,10 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import org.springframework.util.StringUtils;
+import org.springframework.mail.MailException;
+import jakarta.mail.internet.InternetAddress;
+
 @Service
 public class AuthService {
 
@@ -35,6 +39,8 @@ public class AuthService {
     /**generates  6 digit code, saves/replaces it in auth_codes and emails it
      * if email new, user row is also created so app has userId*/
     public void requestCode(String email) {
+        validateEmail(email);
+
         // Create user row if first time
         if (!userRepo.existsByEmail(email)) {
             User u = new User();
@@ -73,6 +79,8 @@ public class AuthService {
 
     //send a delete account code to an existing user only
     public void requestDeleteAccountCode(String email) {
+        validateEmail(email);
+
         if (!userRepo.existsByEmail(email)) {
             throw new IllegalArgumentException("User email not found.");
         }
@@ -130,6 +138,26 @@ public class AuthService {
                         "If you did not request this, please ignore this email.\n\n" +
                         "– CitySync"
         );
-        mailSender.send(msg);
+        try{
+            mailSender.send(msg);
+        }catch (MailException e){
+            throw new IllegalArgumentException("couldn't send verification email");
+        }
     }
-}
+
+    private void validateEmail(String email){
+        if(!StringUtils.hasText(email)){
+            throw new IllegalArgumentException("invalid email address");
+
+        }
+
+        try {
+            InternetAddress addr = new InternetAddress(email);
+            addr.validate();
+        }catch (Exception e){
+
+            throw new IllegalArgumentException("invalid email address");
+        }
+    }
+
+    }
